@@ -1,23 +1,22 @@
-import tkinter as tk
+from GUI import GUI
 
-
-class GUI(tk.Tk):
-    SIZE = 600
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.title("Test")
-        
-        # Set size and center app on screen on startup
-        x = int(self.winfo_screenwidth()/2 - self.SIZE/2)  
-        y = int(self.winfo_screenheight()/2 - self.SIZE/2)
-        self.geometry(f"{self.SIZE}x{self.SIZE}+{x}+{y}")
-        
-
-        
-
+U, P = "test", "123"
 
 class Manager:
-    window = GUI()
-    window.mainloop()
+    def __init__(self) -> None:
+        self.window = GUI(self)
+        self.window.mainloop()
 
+        self.loggedIn = False
+
+    def check_password(self, user: str, pwd: str) -> bool:
+        if len(user) == 0 or len(pwd) == 0:
+            return False
+        print(f"Login Attempt:: User: {user}, Pass: {pwd}") # for debug purposes
+
+        # TODO: check if valid login creds
+        if user == U and pwd == P:
+            self.window.main_frame()
+
+
+        return False # placeholder return value
