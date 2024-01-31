@@ -1,22 +1,23 @@
 import tkinter as tk
-import os, sys
 
 
-"""if os.environ.get('DISPLAY','') == '':
-            print('no display found. Using :0.0')
-            os.environ.__setitem__('DISPLAY', ':0.0')
-"""
 class GUI(tk.Tk):
-    WIDTH, HEIGHT = 300, 300
+    SIZE = 600
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("Test")
-        self.geometry(f"{self.WIDTH}x{self.HEIGHT}")
+        
+        # Set size and center app on screen on startup
+        x = int(self.winfo_screenwidth()/2 - self.SIZE/2)  
+        y = int(self.winfo_screenheight()/2 - self.SIZE/2)
+        self.geometry(f"{self.SIZE}x{self.SIZE}+{x}+{y}")
+        
 
         
 
 
 class Manager:
     window = GUI()
+    window.mainloop()
 
