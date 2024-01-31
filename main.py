@@ -1,8 +1,8 @@
-
+from manager import Manager
 
 
 def main():
-    pass
+    manager = Manager()
 
 
 if __name__ == "__main__":
