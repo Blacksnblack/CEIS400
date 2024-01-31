@@ -1,13 +1,13 @@
 from GUI import GUI
 
-U, P = "test", "123"
+U, P = "test", "123"  # placeholder user and password
 
 class Manager:
     def __init__(self) -> None:
         self.window = GUI(self)
         self.window.mainloop()
 
-        self.loggedIn = False
+        
 
     def check_password(self, user: str, pwd: str) -> bool:
         if len(user) == 0 or len(pwd) == 0:

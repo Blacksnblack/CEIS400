@@ -4,20 +4,20 @@ from tkinter import StringVar, Entry
 from typing import Protocol
 
 
-class Manager(Protocol):
+class Manager(Protocol):  # for accessing Manager class without circular importing error
     loggedIn: bool
 
     def check_password(self, user: str, pwd: str) -> bool:
         ...
 
     
-def do_grid(root: Frame, cols: int, rows: int) -> None:
+def do_grid(root: Frame, cols: int, rows: int) -> None:  # creates a grid in root
         for i in range(cols):
             root.grid_columnconfigure(i, weight=1)
         for i in range(rows):
             root.grid_rowconfigure(i, weight=1)
 
-def new_label(root, text, textSize=20):
+def new_label(root: Frame, text: str, textSize=20) -> Label:
     return Label(root, text=text, anchor="center", font=("Arial", textSize))
 
 class GUI(tk.Tk):
@@ -33,9 +33,8 @@ class GUI(tk.Tk):
         y = int(self.winfo_screenheight()/2 - self.HEIGHT/2)
         self.geometry(f"{self.WIDTH}x{self.HEIGHT}+{x}+{y}")
         # self.resizable(False, False)  # not resizable ? 
-        self.username = StringVar(self)
-        self.password = StringVar(self)
-        self.current_frame: None | Frame = None
+        self.username, self.password = StringVar(self), StringVar(self)
+        self.current_frame: None|Frame = None
 
         s = Style()
         s.configure('a20.TButton', font=('Arial', 20))
@@ -68,12 +67,7 @@ class GUI(tk.Tk):
         pass_entry = Entry(self.current_frame, textvariable=self.password, justify="center", font=("Arial", 30), show="*")
         pass_entry.grid(row=2, column=2, columnspan=3, sticky="nesw")
 
-        def show_toggle():
-            if pass_entry.cget("show") == "*":
-                pass_entry.configure(show="")
-            else:
-                pass_entry.configure(show="*")
-
+        show_toggle = lambda: pass_entry.configure(show=("" if pass_entry.cget("show")=="*" else "*")) # functionality to toggle showing password
         show_password_btn = Button(self.current_frame, text="Show", command=show_toggle, style="a20.TButton")
         show_password_btn.grid(row=2, column=5, columnspan=1, sticky="nesw", padx=10, pady=10)
 
@@ -88,3 +82,5 @@ class GUI(tk.Tk):
 
         test_label = Label(self.current_frame, text=f"You logged in {self.username.get()}!", font=("Arial", 30), justify="center")
         test_label.grid(row=0, column=0)
+
+        # TODO: setup main menu and add functionality ( call manager class to get stuff from the various other classes )
