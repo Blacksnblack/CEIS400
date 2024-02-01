@@ -2,13 +2,15 @@ import tkinter as tk
 from tkinter.ttk import Frame, Label, Button, Style
 from tkinter import StringVar, Entry
 from typing import Protocol
+from hashlib import sha256
 
 
 class Manager(Protocol):  # for accessing Manager class without circular importing error
     loggedIn: bool
 
-    def check_password(self, user: str, pwd: str) -> bool:
+    def login(self, user: str, pwd: str) -> bool:
         ...
+
 
     
 def do_grid(root: Frame, cols: int, rows: int) -> None:  # creates a grid in root
@@ -19,6 +21,9 @@ def do_grid(root: Frame, cols: int, rows: int) -> None:  # creates a grid in roo
 
 def new_label(root: Frame, text: str, textSize=20) -> Label:
     return Label(root, text=text, anchor="center", font=("Arial", textSize))
+
+def new_button(root: Frame, text: str, command: callable, style: str = "a20.TButton"):
+    return Button(root, text=text, command=command, style=style)
 
 class GUI(tk.Tk):
     WIDTH, HEIGHT = 1000, 800
@@ -42,14 +47,22 @@ class GUI(tk.Tk):
         self.login_frame()  # open login screen
     
     def clear_current_frame(self) -> None:
-        if self.current_frame:
-            self.current_frame.destroy()
-        self.current_frame = Frame(self)
-        self.current_frame.pack(fill="both", expand=True, padx=30, pady=30)
+        if self.current_frame is not None:
+            for child in self.current_frame.winfo_children(): 
+                child.destroy()
+            col, row = self.current_frame.grid_size()
+            for i in range(col):
+                self.current_frame.grid_columnconfigure(i, weight=0)
+            for i in range(row):
+                self.current_frame.grid_rowconfigure(i, weight=0)
+
+        else:
+            self.current_frame = Frame(self)
+            self.current_frame.pack(fill="both", expand=True, padx=30, pady=30)
+
     
     def login_frame(self) -> None:
         self.clear_current_frame()
-
         do_grid(root=self.current_frame, cols=6, rows=4)
 
         login_text = new_label(self.current_frame, text="Login", textSize=30)
@@ -68,19 +81,68 @@ class GUI(tk.Tk):
         pass_entry.grid(row=2, column=2, columnspan=3, sticky="nesw")
 
         show_toggle = lambda: pass_entry.configure(show=("" if pass_entry.cget("show")=="*" else "*")) # functionality to toggle showing password
-        show_password_btn = Button(self.current_frame, text="Show", command=show_toggle, style="a20.TButton")
+        show_password_btn = new_button(root=self.current_frame, text="Show", command=show_toggle)
         show_password_btn.grid(row=2, column=5, columnspan=1, sticky="nesw", padx=10, pady=10)
 
-       
-        login_button = Button(self.current_frame, text="Login", command=lambda : self.manager.check_password(self.username.get(), self.password.get()), style="a20.TButton")
+        try_login = lambda : self.manager.login(self.username.get(), sha256(self.password.get().encode('utf-8')).hexdigest())
+        login_button = new_button(root=self.current_frame, text="Login", command=try_login)
         login_button.grid(row=3, column=0, columnspan=6, sticky="nesw" , padx=40, pady=40)
 
-    def main_frame(self) -> None:
+    def main_menu_frame(self) -> None:
+        """
+        * After the user has logged in, we don't need to ask who is doing the action *
+        
+
+        Main Menu functionality needed:
+        - checking an equipment in and out
+        - a way for the user to get a notification that the equipment they have queued for is available
+        - check user auth level
+            - if supervisor or higher (ex: HR)
+                - ability to terminate an employee
+                - search for equipment details and current ownership and vise - versa for ALL employees
+                    - including employees with excess equipment losses
+                - update employee's skills
+        - way to generate reports and decide on what filters to use or what to search for
+        - ability to see user's currently checked-out equipment
+        """
         self.clear_current_frame()
         
-        do_grid(self.current_frame, 1, 3)
+        btn_dicts = [
+            {"text": (cie:="Check In Equipment"),  "command": lambda : print(cie)},
+            {"text": (coe:="Check Out Equipment"), "command": lambda : print(coe)},
+            {"text": (r:="Reports"),             "command": lambda : print(r)},
+            {"text": (vud:="View User Details"),   "command": lambda : print(vud)}
+        ]
 
-        test_label = Label(self.current_frame, text=f"You logged in {self.username.get()}!", font=("Arial", 30), justify="center")
-        test_label.grid(row=0, column=0)
+        print(self.current_frame.grid_size())
+
+        do_grid(self.current_frame, cols=2, rows=len(btn_dicts) + 3)
+
+
+        
+        buttons = []
+        for i, btn_dict in enumerate(btn_dicts):
+            btn = new_button(root=self.current_frame, **btn_dict)
+            btn.grid(row=i+2, column=0, sticky="nesw", columnspan=2)
+            buttons.append(btn)
+
+        
+
+        # test_label = Label(self.current_frame, text=f"You logged in as {self.username.get()}!", font=("Arial", 30), justify="center")
+        # test_label.grid(row=0, column=0)
 
         # TODO: setup main menu and add functionality ( call manager class to get stuff from the various other classes )
+
+        
+    
+    def checkIn(self) -> None:
+        self.clear_current_frame()
+
+    def checkOut(self) -> None:
+        self.clear_current_frame()
+
+    def Reports(self) -> None:
+        self.clear_current_frame()
+
+    def UserDetails(self) -> None:
+        self.clear_current_frame()
