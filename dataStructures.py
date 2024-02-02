@@ -3,9 +3,10 @@ from dataclasses import dataclass
 from datetime import datetime
 
 class Employee:
-    def __init__(self, name: str, emp_id: int, contactInfo: str, borrowedEquipIds=None, skillIds=None, numLostEquips=0) -> None:
+    def __init__(self, name: str, password_hash: str, emp_id: str, contactInfo: str, borrowedEquipIds=None, skillIds=None, numLostEquips=0) -> None:
         self.name = name
-        self.emp_id: int = emp_id
+        self.password_hash =password_hash
+        self.emp_id: str = emp_id
         self.contactInfo: str = contactInfo
         if borrowedEquipIds is None:
             borrowedEquipIds = []
@@ -19,13 +20,13 @@ class Employee:
         return self.name
 
 class Equipment:
-    def __init__(self, equipId: int, name: str, borrower: None|int = None, skillRequirements = None, queue = None) -> None:
-        self.equipId = equipId
-        self.name = name
-        self.borrower: int|None = borrower
+    def __init__(self, equipId: str, name: str, borrower_id: None|str = None, skillRequirementsIDs = None, queue = None) -> None:
+        self.equipId: str = equipId
+        self.name: str = name
+        self.borrower_id: str|None = borrower_id
         if skillRequirements is None:
             skillRequirements = []
-        self.skillRequirements = skillRequirements
+        self.skillRequirementsIDs: list[str] = skillRequirementsIDs
         if queue is None:
             queue = []
         self.queue = queue
@@ -56,6 +57,6 @@ class LOG_CODES(Enum):
 class log:
     date: datetime
     logCode: int
-    empId: int
-    equipId: int
+    empId: str
+    equipId: str
     notes: list[str]

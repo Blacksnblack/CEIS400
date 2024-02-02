@@ -3,10 +3,14 @@ from tkinter.ttk import Frame, Label, Button, Style
 from tkinter import StringVar, Entry
 from typing import Protocol
 from hashlib import sha256
+from dataStructures import Employee
 
+
+DEBUG = True  # for debugging...
 
 class Manager(Protocol):  # for accessing Manager class without circular importing error
     loggedIn: bool
+    current_user: Employee
 
     def login(self, user: str, pwd: str) -> bool:
         ...
@@ -45,6 +49,7 @@ class GUI(tk.Tk):
         s.configure('a20.TButton', font=('Arial', 20))
 
         self.login_frame()  # open login screen
+
     
     def clear_current_frame(self) -> None:
         if self.current_frame is not None:
@@ -68,7 +73,7 @@ class GUI(tk.Tk):
         login_text = new_label(self.current_frame, text="Login", textSize=30)
         login_text.grid(row=0, column=0, columnspan=6, sticky="nesw")
         
-        user_text = new_label(self.current_frame, text="Username")
+        user_text = new_label(self.current_frame, text="User ID")
         user_text.grid(row=1, column=0, columnspan=2, sticky="nesw")
 
         user_entry = Entry(self.current_frame, textvariable=self.username, justify="center", font=("Arial", 30))
@@ -106,7 +111,7 @@ class GUI(tk.Tk):
         - ability to see user's currently checked-out equipment
         """
         self.clear_current_frame()
-        
+
         btn_dicts = [
             {"text": (cie:="Check In Equipment"),  "command": lambda : print(cie)},
             {"text": (coe:="Check Out Equipment"), "command": lambda : print(coe)},
@@ -114,10 +119,14 @@ class GUI(tk.Tk):
             {"text": (vud:="View User Details"),   "command": lambda : print(vud)}
         ]
 
-        print(self.current_frame.grid_size())
+        if DEBUG:
+            print(self.current_frame.grid_size())
 
+       
         do_grid(self.current_frame, cols=2, rows=len(btn_dicts) + 3)
-
+    
+        welcome_label = new_label(root=self.current_frame, text=f"Welcome, {self.manager.current_user.name}")
+        welcome_label.grid(row=0, column=0, sticky="nesw", columnspan=2)
 
         
         buttons = []

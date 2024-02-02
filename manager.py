@@ -2,7 +2,6 @@ from GUI import GUI
 from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill
 
-U, P = "test", sha256("123".encode('utf-8')).hexdigest()  # placeholder user and password
 DEBUG = True  # obviously for debugging...
 
 class Manager:
@@ -28,20 +27,29 @@ class Manager:
             skills: list[Skill] = []
         self.skills = skills
 
+        self.current_user = None
+
         self.window.mainloop()
 
 
-        
+    def _set_current_user(self, user_id: str, pwd_hash: str) -> bool:
+        if len(self.employees) == 0:
+            return False
+        for emp in self.employees:
+            if emp.emp_id == user_id and emp.password_hash == pwd_hash:
+                self.current_user = emp
+                return True
+        return False
 
-    def login(self, user: str, pwd: str) -> bool:
-        if len(user) == 0 or len(pwd) == 0:
+    def login(self, user_id: str, pwd: str) -> bool:
+        if len(user_id) == 0 or len(pwd) == 0:
             return False
         
         if DEBUG:
-            print(f"Login Attempt:: User: {user}, Pass: {pwd}") 
+            print(f"Login Attempt:: User: {user_id}, Pass: {pwd}, Success: {self._set_current_user(user_id, pwd)}") 
 
         # TODO: pull credentials from a Database and check? maybe have creds stored locally? (obviously hashed...)
-        if user == U and pwd == P:
+        if self._set_current_user(user_id, pwd):
             # TODO: logged In! so give the GUI the info for the user...
             self.window.main_menu_frame()
 
