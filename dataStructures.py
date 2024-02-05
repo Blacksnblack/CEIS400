@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 class Employee:
-    def __init__(self, name: str, password_hash: str, emp_id: str, contactInfo: str, borrowedEquipIds=None, skillIds=None, numLostEquips=0) -> None:
+    def __init__(self, name: str, password_hash: str, emp_id: str, contactInfo: str, borrowedEquipIds=None, skillIds=None, numLostEquips=0, isAdmin=False) -> None:
         self.name = name
         self.password_hash =password_hash
         self.emp_id: str = emp_id
@@ -15,6 +15,7 @@ class Employee:
         self.borrowedEquipIds: list[int] = borrowedEquipIds
         self.skillIds: list[int] = skillIds
         self.numLostEquips = numLostEquips
+        self.isAdmin = isAdmin
     
     def __repr__(self) -> str:
         return self.name

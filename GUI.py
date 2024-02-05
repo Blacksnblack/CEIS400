@@ -3,7 +3,7 @@ from tkinter.ttk import Frame, Label, Button, Style
 from tkinter import StringVar, Entry
 from typing import Protocol
 from hashlib import sha256
-from dataStructures import Employee
+from dataStructures import Employee, Equipment, Skill
 
 
 DEBUG = True  # for debugging...
@@ -11,6 +11,8 @@ DEBUG = True  # for debugging...
 class Manager(Protocol):  # for accessing Manager class without circular importing error
     loggedIn: bool
     current_user: Employee
+    equipment: list[Equipment] | None
+    employees: list[Employee] | None
 
     def login(self, user: str, pwd: str) -> bool:
         ...
@@ -113,17 +115,19 @@ class GUI(tk.Tk):
         self.clear_current_frame()
 
         btn_dicts = [
-            {"text": (cie:="Check In Equipment"),  "command": lambda : print(cie)},
-            {"text": (coe:="Check Out Equipment"), "command": lambda : print(coe)},
-            {"text": (r:="Reports"),             "command": lambda : print(r)},
-            {"text": (vud:="View User Details"),   "command": lambda : print(vud)}
+            {"text": "Check In Equipment",  "command": lambda : self.checkIn()},
+            {"text": "Check Out Equipment", "command": lambda : self.checkOut()},
+            {"text": "Reports",             "command": lambda : self.Reports()},
+            {"text": "View User Details",   "command": lambda : self.UserDetails()}
         ]
 
         if DEBUG:
             print(self.current_frame.grid_size())
 
-       
-        do_grid(self.current_frame, cols=2, rows=len(btn_dicts) + 3)
+        rows = len(btn_dicts) + 3
+        if self.manager.current_user.isAdmin:
+            rows += 1
+        do_grid(self.current_frame, cols=2, rows=rows)
     
         welcome_label = new_label(root=self.current_frame, text=f"Welcome, {self.manager.current_user.name}")
         welcome_label.grid(row=0, column=0, sticky="nesw", columnspan=2)
@@ -135,23 +139,62 @@ class GUI(tk.Tk):
             btn.grid(row=i+2, column=0, sticky="nesw", columnspan=2)
             buttons.append(btn)
 
-        
+        if self.manager.current_user.isAdmin:
+            btn = new_button(root=self.current_frame, text="Manage Employees", command=lambda : self.ManageItems(items=self.manager.employees))
+            btn.grid(row=i+3, column=0, sticky="nesw", columnspan=2)
 
-        # test_label = Label(self.current_frame, text=f"You logged in as {self.username.get()}!", font=("Arial", 30), justify="center")
-        # test_label.grid(row=0, column=0)
+            btn = new_button(root=self.current_frame, text="Manage Equipment", command=lambda: self.ManageItems(items=self.manager.equipment))
+            btn.grid(row=i+4, column=0, sticky="nesw", columnspan=2)
 
-        # TODO: setup main menu and add functionality ( call manager class to get stuff from the various other classes )
 
-        
-    
+    # TODO: replace self._not_implemented() with actualy functionality...
     def checkIn(self) -> None:
         self.clear_current_frame()
+        self._not_implemented()
 
     def checkOut(self) -> None:
         self.clear_current_frame()
+        self._not_implemented()
 
     def Reports(self) -> None:
         self.clear_current_frame()
+        self._not_implemented()
 
     def UserDetails(self) -> None:
         self.clear_current_frame()
+        self._not_implemented()
+    
+    def ManageItems(self, items: list[Equipment|Employee]=None, selection: None|Equipment|Employee=None) -> None:
+        if selection is None:
+            self._getSelection(items=items)
+            return
+        
+        # TODO: create entry's depending on if it's an Employee or an Equipment
+        self.clear_current_frame()
+        if all([isinstance(x, Employee) for x in items]):
+            pass
+        elif all([isinstance(x, Equipment) for x in items]):
+            pass
+        else:
+            print("Error : List of items aren't all Equipment or all Employees for some reason...")
+
+    
+    def _getSelection(self, items: list[Equipment | Employee]):
+        self.clear_current_frame()
+        
+        for item in items:
+            pass
+            # TODO create list of buttons with the command being lambda: self.ManageItems(selection=item)
+        
+        self._not_implemented()
+
+
+    def _not_implemented(self) -> None:
+        self.clear_current_frame()
+        lab = new_label(root=self.current_frame, text="Not Implemented yet...")
+        do_grid(root=self.current_frame, cols=1, rows=4)
+        lab.grid(row=1, column=0, sticky="nesw")
+        but = new_button(root=self.current_frame, text="Main Menu", command=lambda: self.main_menu_frame())
+        but.grid(row=2, column=0, sticky="nesw")
+
+    
