@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter.ttk import Frame, Label, Button, Style
-from tkinter import StringVar, Entry
+from tkinter import StringVar, Entry, Scrollbar
 from typing import Protocol
 from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill
+from customWidgets import ListFrame
 
 
 DEBUG = True  # for debugging...
@@ -170,30 +171,45 @@ class GUI(tk.Tk):
             return
         
         # TODO: create entry's depending on if it's an Employee or an Equipment
+        # there is a selection but is it employee or equipment
         self.clear_current_frame()
-        if all([isinstance(x, Employee) for x in items]):
+        if isinstance(selection, Employee):
+            lab = new_label(self.current_frame, text=selection.name)
+            lab.pack()
             pass
-        elif all([isinstance(x, Equipment) for x in items]):
+        elif isinstance(selection, Equipment):
             pass
         else:
-            print("Error : List of items aren't all Equipment or all Employees for some reason...")
+            print("Error : Selected Item isn't Equipment or Employee class for some reason...")  # this should never happen
 
     
     def _getSelection(self, items: list[Equipment | Employee]):
         self.clear_current_frame()
-        
-        for item in items:
-            pass
+
+        do_grid(root=self.current_frame, cols=1, rows=5)
+
+        lab = new_label(root=self.current_frame, text="Selection")
+        lab.grid(row=0, column=0, sticky="nesw")
+
+        subFrame = Frame(self.current_frame)  
+        data=[{"text": x.name, "command": lambda: self.ManageItems(selection=x)} for x in items]  #TODO: passing command is broken; only remembers last one for some reason?
+        print(data)
+        lf = ListFrame(parent=subFrame, text_data=data, item_height=100)
+
+
+        subFrame.grid(row=1, column=0, sticky="nesw", rowspan=4)
             # TODO create list of buttons with the command being lambda: self.ManageItems(selection=item)
         
-        self._not_implemented()
+        # self._not_implemented()
 
 
     def _not_implemented(self) -> None:
         self.clear_current_frame()
-        lab = new_label(root=self.current_frame, text="Not Implemented yet...")
         do_grid(root=self.current_frame, cols=1, rows=4)
+
+        lab = new_label(root=self.current_frame, text="Not Implemented yet...")
         lab.grid(row=1, column=0, sticky="nesw")
+
         but = new_button(root=self.current_frame, text="Main Menu", command=lambda: self.main_menu_frame())
         but.grid(row=2, column=0, sticky="nesw")
 
