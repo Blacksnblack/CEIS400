@@ -1,11 +1,11 @@
 from GUI import GUI
 from hashlib import sha256
-from dataStructures import Employee, Equipment, Skill
+from dataStructures import Employee, Equipment, Skill, Log
 
 DEBUG = True  # obviously for debugging...
 
 class Manager:
-    def __init__(self, checkoutLimit=5, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None) -> None:
+    def __init__(self, checkoutLimit=5, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None, logs=None) -> None:
         self.window = GUI(self)
         
         self.checkoutLimit = checkoutLimit
@@ -26,6 +26,9 @@ class Manager:
         if skills is None:
             skills: list[Skill] = []
         self.skills = skills
+
+        if logs is None:
+            logs: list[Log] = []
 
         self.current_user = None
 

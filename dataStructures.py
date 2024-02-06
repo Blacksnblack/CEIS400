@@ -55,7 +55,7 @@ class LOG_CODES(Enum):
     CHECKIN = 2
 
 @dataclass
-class log:
+class Log:
     date: datetime
     logCode: int
     empId: str
