@@ -1,10 +1,10 @@
 import tkinter as tk
-from tkinter.ttk import Frame, Label, Button, Style
-from tkinter import StringVar, Entry, Scrollbar
+from tkinter.ttk import Frame, Label, Button, Style, Combobox
+from tkinter import StringVar, Entry
 from typing import Protocol
 from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill
-from customWidgets import ListFrame, ButtonVar
+from customWidgets import ListFrame
 
 
 DEBUG = True  # for debugging...
@@ -18,6 +18,14 @@ class Manager(Protocol):  # for accessing Manager class without circular importi
     def login(self, user: str, pwd: str) -> bool:
         ...
 
+    def getSkillByID(self, skill_id: str) -> Skill|None:
+        ...
+    
+    def getEmployeeByID(self, emp_id: str) -> Employee|None:
+        ...
+    
+    def getEquipmentByID(self, equip_id: str) -> Equipment|None:
+        ...
 
     
 def do_grid(root: Frame, cols: int, rows: int) -> None:  # creates a grid in root
@@ -46,6 +54,7 @@ class GUI(tk.Tk):
         self.geometry(f"{self.WIDTH}x{self.HEIGHT}+{x}+{y}")
         # self.resizable(False, False)  # not resizable ? 
         self.username, self.password = StringVar(self), StringVar(self)
+        self.reusableStringVars = [StringVar(self) for _ in range(10)]
         self.current_frame: None|Frame = None
 
         s = Style()
@@ -63,11 +72,18 @@ class GUI(tk.Tk):
                 self.current_frame.grid_columnconfigure(i, weight=0)
             for i in range(row):
                 self.current_frame.grid_rowconfigure(i, weight=0)
+            # need to do this beacuse of ListFrame from customWidgets.py
+            self.unbind_all('<MouseWheel>')  
+            self.unbind_all('<Configure>')
 
         else:
             self.current_frame = Frame(self)
             self.current_frame.pack(fill="both", expand=True, padx=30, pady=30)
 
+    def try_login(self):
+        self.manager.login(self.username.get(), sha256(self.password.get().encode('utf-8')).hexdigest())
+        self.username.set("")
+        self.password.set("")
     
     def login_frame(self) -> None:
         self.clear_current_frame()
@@ -92,8 +108,7 @@ class GUI(tk.Tk):
         show_password_btn = new_button(root=self.current_frame, text="Show", command=show_toggle)
         show_password_btn.grid(row=2, column=5, columnspan=1, sticky="nesw", padx=10, pady=10)
 
-        try_login = lambda : self.manager.login(self.username.get(), sha256(self.password.get().encode('utf-8')).hexdigest())
-        login_button = new_button(root=self.current_frame, text="Login", command=try_login)
+        login_button = new_button(root=self.current_frame, text="Login", command=self.try_login)
         login_button.grid(row=3, column=0, columnspan=6, sticky="nesw" , padx=40, pady=40)
 
     def main_menu_frame(self) -> None:
@@ -128,25 +143,31 @@ class GUI(tk.Tk):
         rows = len(btn_dicts) + 3
         if self.manager.current_user.isAdmin:
             rows += 1
-        do_grid(self.current_frame, cols=2, rows=rows)
+        cols = 10
+        do_grid(self.current_frame, cols=3, rows=rows)
     
-        welcome_label = new_label(root=self.current_frame, text=f"Welcome, {self.manager.current_user.name}")
-        welcome_label.grid(row=0, column=0, sticky="nesw", columnspan=2)
+        new_label(root=self.current_frame, text=f"Welcome, {self.manager.current_user.name}").grid(row=0, column=0, sticky="nesw", columnspan=int(2*cols/3))
+        new_button(root=self.current_frame, text="Logout", command=self._logout).grid(row=0, column=int(2*cols/3), columnspan=int(cols/3), sticky="news")
+
 
         
         buttons = []
         for i, btn_dict in enumerate(btn_dicts):
             btn = new_button(root=self.current_frame, **btn_dict)
-            btn.grid(row=i+2, column=0, sticky="nesw", columnspan=2)
+            btn.grid(row=i+2, column=0, sticky="nesw", columnspan=cols)
             buttons.append(btn)
 
         if self.manager.current_user.isAdmin:
             btn = new_button(root=self.current_frame, text="Manage Employees", command=lambda : self.ManageItems(items=self.manager.employees))
-            btn.grid(row=i+3, column=0, sticky="nesw", columnspan=2)
+            btn.grid(row=i+3, column=0, sticky="nesw", columnspan=cols)
 
             btn = new_button(root=self.current_frame, text="Manage Equipment", command=lambda: self.ManageItems(items=self.manager.equipment))
-            btn.grid(row=i+4, column=0, sticky="nesw", columnspan=2)
+            btn.grid(row=i+4, column=0, sticky="nesw", columnspan=cols)
 
+
+    def _logout(self):
+        self.manager.current_user = None
+        self.login_frame()
 
     # TODO: replace self._not_implemented() with actualy functionality...
     def checkIn(self) -> None:
@@ -164,30 +185,115 @@ class GUI(tk.Tk):
         self._not_implemented()
 
     def UserDetails(self) -> None:
+        user = self.manager.current_user
         self.clear_current_frame()
-        self._not_implemented()
+        cols, rows = 6, 10
+        do_grid(self.current_frame, cols=cols, rows=rows)
+        new_label(self.current_frame, text=user.name).grid(column=0, row=0, columnspan=cols)
+
+        new_label(self.current_frame, text="Name").grid(row=1, column=0, columnspan=int(cols/3), sticky="nesw")
+        self.reusableStringVars[0].set(user.name)
+        Entry(master=self.current_frame, textvariable=self.reusableStringVars[0], justify="center", font=("Arial", 20)).grid(row=1, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+        
+        new_label(self.current_frame, text="Employee ID").grid(row=2, column=0, columnspan=int(cols/3), sticky="nesw")
+        self.reusableStringVars[1].set(user.emp_id)
+        if user.isAdmin:
+            Entry(master=self.current_frame, textvariable=self.reusableStringVars[1], justify="center", font=("Arial", 20)).grid(row=2, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+        else:
+            new_label(root=self.current_frame, text=user.emp_id).grid(row=2, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+        new_label(self.current_frame, text="Contact Info").grid(row=3, column=0, columnspan=int(cols/3), sticky="nesw")
+        self.reusableStringVars[2].set(user.contactInfo)
+        Entry(master=self.current_frame, textvariable=self.reusableStringVars[2], justify="center", font=("Arial", 20)).grid(row=3, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+        new_label(self.current_frame, text="Borrowed Equipment").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
+        values=[equip.name for equipID in user.borrowedEquipIds if (equip:=self.manager.getEquipmentByID(equip_id=equipID)) is not None]
+        if len(values) == 0:
+            values = ["None"]
+        combo = Combobox(master=self.current_frame, state="readonly", values=values, font=("Arial", 20), justify="center")
+        combo.current(0 if len(values) > 0 else None)
+        combo.grid(row=4, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+        new_label(self.current_frame, text=f"Number of Lost Equipment: {user.numLostEquips}").grid(row=5, column=0, columnspan=cols, sticky="news")
+
+
+        new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(column=0, row=rows-1, columnspan=int(cols/2), sticky="nesw") # back button
+        new_button(root=self.current_frame, text="Save", command=lambda: self._save_changes(savingObj=user)).grid(column=int(cols/2), row=rows-1, columnspan=int(cols/2), sticky="nesw") # save button
+        
+
     
-    def ManageItems(self, items: list[Equipment|Employee]=None, selection_index: None|int=None) -> None:
+    def ManageItems(self, items: list[Equipment|Employee]=None, selection_index: None|int=None) -> None:  # this function handles Equipment and Employee obj Handling
         if selection_index is None:
             self._getSelection(items=items)
             return
         if DEBUG:
             print(f"Selection Index: {selection_index}")
-            
+        
         self.clear_current_frame()
         cols, rows = 6, 10
         do_grid(self.current_frame, cols=cols, rows=rows)
         new_label(self.current_frame, text=items[selection_index].name).grid(column=0, row=0, columnspan=cols)
         new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(items=items)).grid(column=0, row=rows-1, columnspan=int(cols/2), sticky="nesw") # back button
-        new_button(root=self.current_frame, text="Save", command=lambda: self._save_changes()).grid(column=int(cols/2), row=rows-1, columnspan=int(cols/2), sticky="nesw") # save button
-        if isinstance(items[0], Employee): # there is a selection but is it employee or equipment
-            # TODO: add | label | Entry | for each variable in Employee
-            pass
-        elif isinstance(items[0], Equipment):
-            pass
+        new_button(root=self.current_frame, text="Save", command=lambda: self._save_changes(savingObj=items[selection_index])).grid(column=int(cols/2), row=rows-1, columnspan=int(cols/2), sticky="nesw") # save button
+        if isinstance(items[0], Employee): # Selection is Employee
+            new_label(self.current_frame, text="Name").grid(row=1, column=0, columnspan=int(cols/3), sticky="nesw")
+            self.reusableStringVars[0].set(items[selection_index].name)
+            Entry(master=self.current_frame, textvariable=self.reusableStringVars[0], justify="center", font=("Arial", 20)).grid(row=1, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+            
+            new_label(self.current_frame, text="Employee ID").grid(row=2, column=0, columnspan=int(cols/3), sticky="nesw")
+            self.reusableStringVars[1].set(items[selection_index].emp_id)
+            Entry(master=self.current_frame, textvariable=self.reusableStringVars[1], justify="center", font=("Arial", 20)).grid(row=2, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+            new_label(self.current_frame, text="Contact Info").grid(row=3, column=0, columnspan=int(cols/3), sticky="nesw")
+            self.reusableStringVars[2].set(items[selection_index].contactInfo)
+            Entry(master=self.current_frame, textvariable=self.reusableStringVars[2], justify="center", font=("Arial", 20)).grid(row=3, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+            new_label(self.current_frame, text="Borrowed Equipment").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
+            values=[equip.name for equipID in items[selection_index].borrowedEquipIds if (equip:=self.manager.getEquipmentByID(equip_id=equipID)) is not None]
+            if len(values) == 0:
+                values = ["None"]
+            combo = Combobox(master=self.current_frame, state="readonly", values=values, font=("Arial", 20), justify="center")
+            combo.current(0 if len(values) > 0 else None)
+            combo.grid(row=4, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+            new_label(self.current_frame, text=f"Number of Lost Equipment: {items[selection_index].numLostEquips}").grid(row=5, column=0, columnspan=cols, sticky="news")
+
+            new_button(self.current_frame, text="Edit Skills", command=lambda: self.editSkills(currentObj=items[selection_index])).grid(row=6, column=1, columnspan=cols-2, sticky="nesw")
+
+        elif isinstance(items[0], Equipment): # Selection is Equipment
+            new_label(self.current_frame, text="Name").grid(row=1, column=0, columnspan=int(cols/3), sticky="nesw")
+            self.reusableStringVars[0].set(items[selection_index].name)
+            Entry(master=self.current_frame, textvariable=self.reusableStringVars[0], justify="center", font=("Arial", 20)).grid(row=1, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+            
+            new_label(self.current_frame, text="Equipment ID").grid(row=2, column=0, columnspan=int(cols/3), sticky="nesw")
+            self.reusableStringVars[1].set(items[selection_index].equipId)
+            Entry(master=self.current_frame, textvariable=self.reusableStringVars[1], justify="center", font=("Arial", 20)).grid(row=2, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
+
+            b_lab = new_label(self.current_frame, text=f"Borrowed By: {self.manager.getEmployeeByID(emp_id=b_id).name if (b_id:=items[selection_index].borrower_id) is not None else "Vacant"}")
+            b_lab.grid(row=3, column=0, columnspan=cols, sticky="nesw")
+
+            new_label(self.current_frame, text="Queue").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
+            values=[emp.name for empID in items[selection_index].queue if (emp:=self.manager.getEmployeeByID(emp_id=empID)) is not None]
+            if len(values) == 0:
+                values = ["None"]
+            combo = Combobox(master=self.current_frame, state="readonly", values=values, font=("Arial", 20), justify="center")
+            combo.current(0 if len(values) > 0 else None)
+            combo.grid(row=4, column=int(cols/3), columnspan=int(2*cols/3), sticky="nesw")
         else:
             print("Error : Selected Item isn't Equipment or Employee class for some reason...")  # this should never happen
 
+    def editSkills(self, currentObj: Employee|Equipment):
+        self._not_implemented()
+         # TODO: need a way to add / remove skills as well as create a new skill and a way to visualize the emps current skills here
+        """
+        # * Originally tried to have the editing skills in ManageItems() but gonna move to seperate function * 
+        new_label(self.current_frame, text="Skills").grid(row=4, column=0, columnspan=int(cols/6), sticky="nesw")
+        print(items[selection_index].skillIds)
+        values=[skill.name for skillID in items[selection_index].skillIds if (skill:=self.manager.getSkillByID(skill_id=skillID)) is not None]
+        combo = Combobox(master=self.current_frame, state="readonly", values=values, font=("Arial", 20), justify="center")
+        combo.grid(row=4, column=int(cols/6), columnspan=int(cols/6), sticky="nesw")
+        """
+       
     
     def _getSelection(self, items: list[Equipment | Employee]):
         self.clear_current_frame()
@@ -199,8 +305,26 @@ class GUI(tk.Tk):
         lf = ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100)
         new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, sticky="nesw")
     
-    def _save_changes(self):
-        pass
+    def _save_changes(self, savingObj: Employee|Equipment):
+        if isinstance(savingObj, Employee):
+            vals = [var.get() for var in self.reusableStringVars[:3]]
+            savingObj.name = vals[0] # name
+            # TODO: if ID changes need to look through and change references
+            savingObj.emp_id = vals[1] # Emp ID 
+            savingObj.contactInfo = vals[2] # contact Info
+            for var in self.reusableStringVars[:3]: # clear variables
+                var.set("")
+                
+        elif isinstance(savingObj, Equipment):
+            vars = self.reusableStringVars[:2]
+            vals = [var.get() for var in vars]
+            savingObj.name = vals[0] # name
+            # TODO: if ID changes need to look through and change references
+            savingObj.equipId = vals[1] # equipment Id  
+            for var in vars: # clear variables
+                var.set("")
+        else:
+            print("Error: Object typing isn't as expected") # This should never happen
 
     def _not_implemented(self) -> None:
         self.clear_current_frame()

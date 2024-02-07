@@ -59,4 +59,20 @@ class Manager:
 
         return False # placeholder return value
     
-    # TODO: add functions to get datastructures by IDs
+    def getSkillByID(self, skill_id: str) -> Skill|None:
+        for skill in self.skills:
+            if skill.skillId == skill_id:
+                return skill
+        return None
+    
+    def getEmployeeByID(self, emp_id: str) -> Employee|None:
+        for emp in self.employees:
+            if emp.emp_id == emp_id:
+                return emp
+        return None
+    
+    def getEquipmentByID(self, equip_id: str) -> Equipment|None:
+        for equip in self.equipment:
+            if equip.equipId == equip_id:
+                return equip
+        return None

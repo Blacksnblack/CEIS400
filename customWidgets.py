@@ -67,4 +67,4 @@ class ListFrame(ttk.Frame):
 
 class ButtonVar(Button):
 	def __init__(self, frame, item, i, gui, items, *args, **kwargs):
-		super().__init__(master=frame, text=f'{item}', command=lambda: gui.ManageItems(items=items, selection_index=i), *args, **kwargs)
+		super().__init__(master=frame, text=f'{item}', command=lambda: gui.ManageItems(items=items, selection_index=i) , style="a20.TButton", *args, **kwargs)

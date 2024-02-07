@@ -44,7 +44,7 @@ class Equipment:
 @dataclass
 class Skill:
     name: str
-    skillId: int
+    skillId: str
 
 
 class LOG_CODES(Enum):
