@@ -4,7 +4,7 @@ from tkinter import StringVar, Entry, Scrollbar
 from typing import Protocol
 from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill
-from customWidgets import ListFrame
+from customWidgets import ListFrame, ButtonVar
 
 
 DEBUG = True  # for debugging...
@@ -155,6 +155,8 @@ class GUI(tk.Tk):
 
     def checkOut(self) -> None:
         self.clear_current_frame()
+        # need a form to select an equipment
+        # whoever is logged in will be checking out
         self._not_implemented()
 
     def Reports(self) -> None:
@@ -165,19 +167,23 @@ class GUI(tk.Tk):
         self.clear_current_frame()
         self._not_implemented()
     
-    def ManageItems(self, items: list[Equipment|Employee]=None, selection: None|Equipment|Employee=None) -> None:
-        if selection is None:
+    def ManageItems(self, items: list[Equipment|Employee]=None, selection_index: None|int=None) -> None:
+        if selection_index is None:
             self._getSelection(items=items)
             return
-        
-        # TODO: create entry's depending on if it's an Employee or an Equipment
-        # there is a selection but is it employee or equipment
+        if DEBUG:
+            print(f"Selection Index: {selection_index}")
+            
         self.clear_current_frame()
-        if isinstance(selection, Employee):
-            lab = new_label(self.current_frame, text=selection.name)
-            lab.pack()
+        cols, rows = 6, 10
+        do_grid(self.current_frame, cols=cols, rows=rows)
+        new_label(self.current_frame, text=items[selection_index].name).grid(column=0, row=0, columnspan=cols)
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(items=items)).grid(column=0, row=rows-1, columnspan=int(cols/2), sticky="nesw") # back button
+        new_button(root=self.current_frame, text="Save", command=lambda: self._save_changes()).grid(column=int(cols/2), row=rows-1, columnspan=int(cols/2), sticky="nesw") # save button
+        if isinstance(items[0], Employee): # there is a selection but is it employee or equipment
+            # TODO: add | label | Entry | for each variable in Employee
             pass
-        elif isinstance(selection, Equipment):
+        elif isinstance(items[0], Equipment):
             pass
         else:
             print("Error : Selected Item isn't Equipment or Employee class for some reason...")  # this should never happen
@@ -185,23 +191,16 @@ class GUI(tk.Tk):
     
     def _getSelection(self, items: list[Equipment | Employee]):
         self.clear_current_frame()
-
-        do_grid(root=self.current_frame, cols=1, rows=5)
-
-        lab = new_label(root=self.current_frame, text="Selection")
-        lab.grid(row=0, column=0, sticky="nesw")
-
-        subFrame = Frame(self.current_frame)  
-        data=[{"text": x.name, "command": lambda: self.ManageItems(selection=x)} for x in items]  #TODO: passing command is broken; only remembers last one for some reason?
-        print(data)
-        lf = ListFrame(parent=subFrame, text_data=data, item_height=100)
-
-
+        do_grid(root=self.current_frame, cols=1, rows=6)
+        new_label(root=self.current_frame, text="Make a Selection").grid(row=0, column=0, sticky="nesw")
+        subFrame = Frame(self.current_frame)
         subFrame.grid(row=1, column=0, sticky="nesw", rowspan=4)
-            # TODO create list of buttons with the command being lambda: self.ManageItems(selection=item)
-        
-        # self._not_implemented()
-
+        buttons_data = [{"gui":self, "i":i, "items":items, "item":x} for i, x in enumerate(items)]
+        lf = ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100)
+        new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, sticky="nesw")
+    
+    def _save_changes(self):
+        pass
 
     def _not_implemented(self) -> None:
         self.clear_current_frame()

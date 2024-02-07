@@ -2,18 +2,20 @@
 
 import tkinter as tk
 from tkinter import ttk
+from tkinter.ttk import Button
+from typing import overload
 
 # exercise
 # create a scrollbar
 
 class ListFrame(ttk.Frame):
-	def __init__(self, parent, text_data, item_height):
+	def __init__(self, parent, buttons_data, item_height):
 		super().__init__(master = parent)
 		self.pack(expand = True, fill = 'both')
 
 		# widget data
-		self.text_data = text_data
-		self.item_number = len(text_data)
+		self.buttons_data = buttons_data
+		self.item_number = len(buttons_data)
 		self.list_height = self.item_number * item_height
 
 		# canvas 
@@ -23,8 +25,9 @@ class ListFrame(ttk.Frame):
 		# display frame
 		self.frame = ttk.Frame(self)
 		
-		for item in self.text_data:
-			self.create_item(item=item["text"], command=item["command"]).pack(expand = True, fill = 'both', pady =  4, padx = 10)
+		"""for item in self.text_data:
+			self.create_item(item=item["text"], command=item["command"]).pack(expand = True, fill = 'both', pady =  4, padx = 10)"""
+		self.addButtons()
 
 		# scrollbar 
 		self.scrollbar = ttk.Scrollbar(self, orient = 'vertical', command = self.canvas.yview)
@@ -56,11 +59,27 @@ class ListFrame(ttk.Frame):
 		frame = ttk.Frame(self.frame)
 		# grid layout
 		frame.rowconfigure(0, weight = 1)
-		frame.columnconfigure((0,), weight = 1, uniform = 'a')
+		frame.columnconfigure((0,), weight = 1)
 
 		# widgets 
 		# ttk.Label(frame, text = f'#{index}').grid(row = 0, column = 0)
 		# ttk.Label(frame, text = f'{item[0]}').grid(row = 0, column = 1)
-		ttk.Button(frame, text = f'{item}', command=command).grid(row = 0, column = 0, sticky = 'nsew')
+		ButtonVar(master=frame, text=f'{item}', command=command).grid(row = 0, column = 0, sticky = 'nsew')
 		
 		return frame
+
+	def addButtons(self):
+		for button in self.buttons_data:
+			frame = ttk.Frame(self.frame)
+			# grid layout
+			frame.rowconfigure(0, weight = 1)
+			frame.columnconfigure((0,), weight = 1)
+			ButtonVar(frame=frame, **button).grid(row = 0, column = 0, sticky = 'nsew')
+			
+			frame.pack(expand = True, fill = 'both', pady =  4, padx = 10)
+
+	
+
+class ButtonVar(Button):
+	def __init__(self, frame, item, i, gui, items, *args, **kwargs):
+		super().__init__(master=frame, text=f'{item}', command=lambda: gui.ManageItems(items=items, selection_index=i), *args, **kwargs)
