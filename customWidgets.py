@@ -24,9 +24,7 @@ class ListFrame(ttk.Frame):
 
 		# display frame
 		self.frame = ttk.Frame(self)
-		
-		"""for item in self.text_data:
-			self.create_item(item=item["text"], command=item["command"]).pack(expand = True, fill = 'both', pady =  4, padx = 10)"""
+
 		self.addButtons()
 
 		# scrollbar 
@@ -54,19 +52,6 @@ class ListFrame(ttk.Frame):
 			anchor = 'nw', 
 			width = self.winfo_width(), 
 			height = height)
-
-	def create_item(self, item, command):
-		frame = ttk.Frame(self.frame)
-		# grid layout
-		frame.rowconfigure(0, weight = 1)
-		frame.columnconfigure((0,), weight = 1)
-
-		# widgets 
-		# ttk.Label(frame, text = f'#{index}').grid(row = 0, column = 0)
-		# ttk.Label(frame, text = f'{item[0]}').grid(row = 0, column = 1)
-		ButtonVar(master=frame, text=f'{item}', command=command).grid(row = 0, column = 0, sticky = 'nsew')
-		
-		return frame
 
 	def addButtons(self):
 		for button in self.buttons_data:
