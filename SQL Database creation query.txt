@@ -1,0 +1,39 @@
+CREATE DATABASE IF NOT EXISTS ceis400;
+
+USE ceis400;
+
+CREATE TABLE IF NOT EXISTS Equipment (
+    equip_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    borrower_id INT,
+    skill_id_reqs TEXT,
+    reservation_emp_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Employee (
+    emp_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    borrowed_equip_ids TEXT,
+    skills_ids TEXT,
+    numLostEquips INT,
+    contactInfo VARCHAR(255),
+    isTerminated BOOLEAN,
+    logs TEXT,
+    isAdmin BOOLEAN,
+    password_hash VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS Manager (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment TEXT,
+    employees TEXT,
+    terminatedEmployees TEXT,
+    skills TEXT,
+    checkoutLimit INT,
+    lostLimit INT
+);
+
+CREATE TABLE IF NOT EXISTS Skill (
+    skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255)
+);
