@@ -58,3 +58,5 @@ class Manager:
 
 
         return False # placeholder return value
+    
+    # TODO: add functions to get datastructures by IDs

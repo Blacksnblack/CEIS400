@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 class Employee:
-    def __init__(self, name: str, password_hash: str, emp_id: str, contactInfo: str, borrowedEquipIds=None, skillIds=None, numLostEquips=0, isAdmin=False) -> None:
+    def __init__(self, name: str, password_hash: str, emp_id: str, contactInfo: str, borrowedEquipIds:list[str]|None=None, skillIds:list[str]|None=None, numLostEquips=0, isAdmin=False) -> None:
         self.name = name
         self.password_hash =password_hash
         self.emp_id: str = emp_id
@@ -12,8 +12,8 @@ class Employee:
             borrowedEquipIds = []
         if skillIds is None:
             skillIds = []
-        self.borrowedEquipIds: list[int] = borrowedEquipIds
-        self.skillIds: list[int] = skillIds
+        self.borrowedEquipIds: list[str] = borrowedEquipIds
+        self.skillIds: list[str] = skillIds
         self.numLostEquips = numLostEquips
         self.isAdmin = isAdmin
     
@@ -21,23 +21,21 @@ class Employee:
         return self.name
 
 class Equipment:
-    def __init__(self, equipId: str, name: str, borrower_id: None|str = None, skillRequirementsIDs = None, queue = None) -> None:
+    def __init__(self, equipId: str, name: str, borrower_id: None|str = None, skillRequirementsIDs: list[str]|None = None, queue: list[str]|None = None) -> None:
         self.equipId: str = equipId
         self.name: str = name
         self.borrower_id: str|None = borrower_id
-        if skillRequirements is None:
-            skillRequirements = []
         self.skillRequirementsIDs: list[str] = skillRequirementsIDs
         if queue is None:
             queue = []
-        self.queue = queue
+        self.queue: list[str] = queue
     
     def __repr__(self) -> str:
         return self.name
     
-    def getMissingSkills(self, emp: Employee) -> list[int]:
+    def getMissingSkills(self, emp: Employee) -> list[str]:
         missing = []
-        for skill_id in self.skillRequirements:
+        for skill_id in self.skillRequirementsIDs:
             if skill_id not in emp.skillIds:
                 missing.append(skill_id)
         return missing
