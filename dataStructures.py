@@ -31,8 +31,11 @@ class Equipment:
         if queue is None:
             queue = []
         self.queue: list[str] = queue
+        self.isLost = False
     
     def __repr__(self) -> str:
+        if self.isLost:
+            return self.name + " [LOST]"
         return self.name
     
     def getMissingSkills(self, emp: Employee) -> list[str]:

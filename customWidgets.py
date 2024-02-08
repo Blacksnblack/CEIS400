@@ -9,7 +9,8 @@ from typing import overload
 # create a scrollbar
 
 class ListFrame(ttk.Frame):
-	def __init__(self, parent, buttons_data, item_height):
+	def __init__(self, parent, buttons_data, item_height, isLost=False):
+		self.isLost= isLost
 		super().__init__(master = parent)
 		self.pack(expand = True, fill = 'both')
 
@@ -59,7 +60,10 @@ class ListFrame(ttk.Frame):
 			# grid layout
 			frame.rowconfigure(0, weight = 1)
 			frame.columnconfigure((0,), weight = 1)
-			ButtonVar(frame=frame, **button).grid(row = 0, column = 0, sticky = 'nsew')
+			if self.isLost:
+				lostEquipmentButtonVar(frame=frame, **button).grid(row = 0, column = 0, sticky = 'nsew')
+			else:
+				ButtonVar(frame=frame, **button).grid(row = 0, column = 0, sticky = 'nsew')
 			
 			frame.pack(expand = True, fill = 'both', pady =  4, padx = 10)
 
@@ -68,3 +72,8 @@ class ListFrame(ttk.Frame):
 class ButtonVar(Button):
 	def __init__(self, frame, item, i, gui, items, *args, **kwargs):
 		super().__init__(master=frame, text=f'{item}', command=lambda: gui.ManageItems(items=items, selection_index=i) , style="a20.TButton", *args, **kwargs)
+
+
+class lostEquipmentButtonVar(Button):
+	def __init__(self, frame, item, i, gui, items, *args, **kwargs):
+		super().__init__(master=frame, text=f'{item}', command=lambda: gui.lostEquipment_selection(items=items, selection_index=i) , style="a20.TButton", *args, **kwargs)

@@ -129,7 +129,7 @@ class GUI(tk.Tk):
             {"text": "Check Out Equipment", "command": lambda : self.checkOut()},
             {"text": "Reports",             "command": lambda : self.Reports()},
             {"text": "View User Details",   "command": lambda : self.UserDetails()},
-            {"text": "Report Lost Equipment", "command": lambda: self.lostEquipment()}
+            {"text": "Report Lost Equipment", "command": lambda: self.lostEquipment_selection()}
         ]
 
         if DEBUG:
@@ -163,9 +163,33 @@ class GUI(tk.Tk):
             btn.grid(row=i+5, column=0, sticky="news", columnspan=cols)
 
 
-    def lostEquipment(self):
-        self._not_implemented()
+    def _set_lost(self, equip: Equipment):
+        # originally was gonna popup an error if I couldn't find the employee
+        # but thought about situations where it was lost but never checked out, but still be marked as lost
+        if equip.borrower_id is not None and (emp:=self.manager.getEmployeeByID(equip.borrower_id)) is not None:
+            emp.numLostEquips += 1
+        equip.isLost = True
 
+    def lostEquipment_selection(self, items: list[Equipment]=None, selection_index: int|None=None):
+        if items is None:
+            items = [self.manager.getEquipmentByID(x) for x in self.manager.current_user.borrowedEquipIds]
+        do_success_popup = False
+        self.clear_current_frame()
+        do_grid(root=self.current_frame, cols=2, rows=5)
+        if selection_index is not None: # selection is made
+            self._set_lost(items[selection_index])
+            do_success_popup=True
+        new_label(root=self.current_frame, text="Select Equipment To Report As Lost").grid(row=0, column=0, columnspan=2, sticky="nesw")
+        subFrame = Frame(self.current_frame)
+        subFrame.grid(row=1, column=0, columnspan=2, sticky="nesw", rowspan=4)
+        buttons_data = [{"gui":self, "i":i, "items":items, "item":x} for i, x in enumerate(items)]
+        ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100, isLost=True)
+        new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, columnspan=2, sticky="nesw")
+        if do_success_popup: # need to do popup last so it shows up
+            self.popup("Successfully reported equipment as lost", isError=False)
+        
+        
+        
     def _logout(self):
         self.manager.current_user = None
         self.login_frame()
@@ -318,8 +342,8 @@ class GUI(tk.Tk):
             new_label(self.current_frame, text="Equipment ID").grid(row=2, column=0, columnspan=cols//3, sticky="nesw")
             self.reusableStringVars[1].set(items[selection_index].equipId)
             Entry(master=self.current_frame, textvariable=self.reusableStringVars[1], justify="center", font=("Arial", 20)).grid(row=2, column=cols//3, columnspan=2*cols//3, sticky="nesw")
-
-            b_lab = new_label(self.current_frame, text=f"Borrowed By: {self.manager.getEmployeeByID(emp_id=b_id).name if (b_id:=items[selection_index].borrower_id) is not None else "Vacant"}")
+            t = f"Borrowed By: {emp.name if (emp := self.manager.getEmployeeByID(b_id:=items[selection_index].borrower_id)) is not None and b_id is not None else "Vacant"}"
+            b_lab = new_label(self.current_frame, text=t)
             b_lab.grid(row=3, column=0, columnspan=cols, sticky="nesw")
 
             new_label(self.current_frame, text="Queue").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
