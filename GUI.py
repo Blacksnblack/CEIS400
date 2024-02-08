@@ -128,7 +128,8 @@ class GUI(tk.Tk):
             {"text": "Check In Equipment",  "command": lambda : self.checkIn()},
             {"text": "Check Out Equipment", "command": lambda : self.checkOut()},
             {"text": "Reports",             "command": lambda : self.Reports()},
-            {"text": "View User Details",   "command": lambda : self.UserDetails()}
+            {"text": "View User Details",   "command": lambda : self.UserDetails()},
+            {"text": "Report Lost Equipment", "command": lambda: self.lostEquipment()}
         ]
 
         if DEBUG:
@@ -161,6 +162,9 @@ class GUI(tk.Tk):
             btn = new_button(root=self.current_frame, text="Manage Skills", command=lambda: self.manageSkills(self.manager.skills, None, None))
             btn.grid(row=i+5, column=0, sticky="news", columnspan=cols)
 
+
+    def lostEquipment(self):
+        self._not_implemented()
 
     def _logout(self):
         self.manager.current_user = None
@@ -386,9 +390,9 @@ class GUI(tk.Tk):
         ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100)
         new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, sticky="nesw")
         if isinstance(items[0], Equipment):
-            func = lambda: self.ManageItems(items=[]+items, selection_index=0)
+            func = lambda: self.addNewEquipment()
         else: # instance of Employee
-            func = lambda: self.ManageItems(items=items+[], selection_index=i)
+            func = lambda: self.addNewEmployee()
         new_button(root=self.current_frame, text="Add New", command=func).grid(row=5, column=1, sticky="nesw")
     
     def addNewEquipment(self):
@@ -403,14 +407,14 @@ class GUI(tk.Tk):
         if not self.manager.current_user.isAdmin:
             self.popup("Admin Priviliges Needed")
             return
-        equip = Employee(emp_id="", name="", password_hash=sha256("".encode('utf-8')).hexdigest(), contactInfo="")
-        self.manager.equipment.append(equip)
-        self.ManageItems(items=[equip], selection_index=0)
+        emp = Employee(emp_id="", name="", password_hash=sha256("".encode('utf-8')).hexdigest(), contactInfo="")
+        self.manager.employees.append(emp)
+        self.ManageItems(items=[emp], selection_index=0)
     
     def _save_changes(self, savingObj: Employee|Equipment):
         if isinstance(savingObj, Employee):
             vals = [var.get() for var in self.reusableStringVars[:4]]
-            if vals[3]=="False" and len([emp for emp in self.manager.employees if emp.isAdmin]) <= 1: # prevent no admin accounts
+            if vals[3]=="False" and savingObj.isAdmin and len([emp for emp in self.manager.employees if emp.isAdmin]) <= 1: # prevent zero admin accounts
                 self.popup("Cannot remove admin priviledges of last admin")
 
             savingObj.name = vals[0] # name
