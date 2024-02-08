@@ -1,11 +1,12 @@
 from GUI import GUI
 from hashlib import sha256
-from dataStructures import Employee, Equipment, Skill, Log
+from dataStructures import Employee, Equipment, Skill, Log, LOG_CODES
+from datetime import datetime
 
 DEBUG = True  # obviously for debugging...
 
 class Manager:
-    def __init__(self, checkoutLimit=5, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None, logs=None) -> None:
+    def __init__(self, checkoutLimit=1, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None, logs=None) -> None:
         self.window = GUI(self)
         
         self.checkoutLimit = checkoutLimit
@@ -29,6 +30,7 @@ class Manager:
 
         if logs is None:
             logs: list[Log] = []
+        self.logs = logs
 
         self.current_user = None
 
@@ -55,6 +57,9 @@ class Manager:
         if self._set_current_user(user_id, pwd):
             # TODO: logged In! so give the GUI the info for the user...
             self.window.main_menu_frame()
+            return
+        self.window.popup(text="Invalid Username or Password")
+        
 
 
         return False # placeholder return value
@@ -76,3 +81,63 @@ class Manager:
             if equip.equipId == equip_id:
                 return equip
         return None
+    
+    def checkIn(self, equip: Equipment, emp:Employee|None=None, notes: list[str]=[]) -> None:
+        if emp is None:
+            emp = self.current_user
+        
+        # handle errors
+        error_msg = ""
+        if equip.borrower_id is None:
+            error_msg += "Equipment is already checked out.\n"
+        if equip.equipId not in emp.borrowedEquipIds:
+            error_msg += "Employee doesn't have equipment checked out."
+
+        if error_msg != "":
+            self.window.popup(error_msg)
+            return
+
+        # logs
+        self.logs.append(Log(date=datetime.now(), logCode=LOG_CODES.CHECKIN, empId=emp.emp_id, equipId=equip.equipId, notes=notes))
+
+        # finish
+        equip.borrower_id = None
+        emp.borrowedEquipIds.remove(equip.equipId)
+
+        self.window.checkIn()
+        self.window.popup(text="Check In Successful", isError=False)
+
+    def checkout(self, equip: Equipment, emp: Employee|None=None, notes: list[str]=[]) -> None:
+        """
+        Returns a bool if successful and a string of the error, if error else blank str
+        """
+        if emp is None:
+            emp = self.current_user
+
+        # handle errors
+        error_msg = ""
+        if equip.borrower_id is not None:
+            error_msg += "Equipment is not available.\n"
+        if emp.numLostEquips > self.lostLimit:
+            error_msg += "Employee cannot checkout due to lost limitations.\n"
+        if len(emp.borrowedEquipIds) > self.checkoutLimit:
+           error_msg += "Employee cannot checkout due to checkout limitations.\n"
+        missing_skills = equip.getMissingSkills(emp=emp)
+        if len(missing_skills) != 0:
+            error_msg += f"Missing skills for Equipment: \n {'\n'.join(['   ' + self.getSkillByID(skillID).name for skillID in missing_skills])}" 
+
+        if error_msg != "":
+            self.window.popup(text=error_msg)
+            return
+
+        #logs
+        self.logs.append(Log(date=datetime.now(), logCode=LOG_CODES.CHECKOUT, empId=emp.emp_id, equipId=equip.equipId, notes=notes))
+
+        # finish
+        equip.borrower_id = emp.emp_id
+        emp.borrowedEquipIds.append(equip.equipId)
+        
+        self.window.checkOut()
+        self.window.popup(text="Check Out Successful", isError=False)
+        
+                         

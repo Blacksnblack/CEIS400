@@ -25,6 +25,8 @@ class Equipment:
         self.equipId: str = equipId
         self.name: str = name
         self.borrower_id: str|None = borrower_id
+        if skillRequirementsIDs is None:
+            skillRequirementsIDs = []
         self.skillRequirementsIDs: list[str] = skillRequirementsIDs
         if queue is None:
             queue = []
