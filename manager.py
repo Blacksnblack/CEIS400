@@ -139,5 +139,8 @@ class Manager:
         
         self.window.checkOut()
         self.window.popup(text="Check Out Successful", isError=False)
+
+    def logLost(self, equip: Equipment, emp:Employee|None, notes: list[str]=[]):
+        self.logs.append(Log(date=datetime.now(), logCode=LOG_CODES.LOST, empId=emp.emp_id, equipId=equip.equipId, notes=notes))
         
                          

@@ -34,6 +34,8 @@ class Manager(Protocol):  # for accessing Manager class without circular importi
     def checkout(self, equip: Equipment, emp: Employee|None, notes: list[str]=[]) -> (bool, str):
         ...
 
+    def logLost(self, equip: Equipment, emp:Employee|None):
+        ...
     
 def do_grid(root: Frame, cols: int, rows: int) -> None:  # creates a grid in root
         for i in range(cols):
@@ -169,6 +171,7 @@ class GUI(tk.Tk):
         if equip.borrower_id is not None and (emp:=self.manager.getEmployeeByID(equip.borrower_id)) is not None:
             emp.numLostEquips += 1
         equip.isLost = True
+        self.manager.logLost(equip=equip, emp=emp)
 
     def lostEquipment_selection(self, items: list[Equipment]=None, selection_index: int|None=None):
         if items is None:
