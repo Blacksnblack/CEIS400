@@ -2,28 +2,36 @@ from GUI import GUI
 from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill, Log, LOG_CODES
 from datetime import datetime
+from csv_database import (
+    read_employees_from_csv,
+    write_employees_to_csv,
+    read_equipment_from_csv,
+    write_equipment_to_csv,
+    read_skills_from_csv,
+    write_skills_to_csv
+)
 
 DEBUG = True  # obviously for debugging...
 
 class Manager:
     def __init__(self, checkoutLimit=1, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None, logs=None) -> None:
         self.window = GUI(self)
-        
+
         self.checkoutLimit = checkoutLimit
         self.lostLimit = lostLimit
 
         if equipment is None:
             equipment = []
         self.equipment: list[Equipment] = equipment
-        
+
         if employees is None:
             employees = []
         self.employees: list[Employee] = employees
-        
+
         if termEmployees is None:
             termEmployees = []
         self.terminatedEmployees: list[Employee] = termEmployees
-        
+
         if skills is None:
             skills: list[Skill] = []
         self.skills = skills
@@ -33,6 +41,20 @@ class Manager:
         self.logs = logs
 
         self.current_user = None
+
+        def load_data_from_csv(self):
+            self.employees = read_employees_from_csv("employees.csv")
+            self.equipment = read_equipment_from_csv("equipment.csv")
+            self.skills = read_skills_from_csv("skills.csv")
+            # Load other data from CSV files if and as needed
+
+        def save_data_to_csv(self):
+            write_employees_to_csv(self.employees, "employees.csv")
+            write_equipment_to_csv(self.equipment, "equipment.csv")
+            write_skills_to_csv(self.skills, "skills.csv")
+            # Save other data to CSV files if and as needed
+
+        self.load_data_from_csv()  # Load data from CSV files when the Manager instance is created/called
 
         self.window.mainloop()
 
@@ -49,9 +71,9 @@ class Manager:
     def login(self, user_id: str, pwd: str) -> bool:
         if len(user_id) == 0 or len(pwd) == 0:
             return False
-        
+
         if DEBUG:
-            print(f"Login Attempt:: User: {user_id}, Pass: {pwd}, Success: {self._set_current_user(user_id, pwd)}") 
+            print(f"Login Attempt:: User: {user_id}, Pass: {pwd}, Success: {self._set_current_user(user_id, pwd)}")
 
         # TODO: pull credentials from a Database and check? maybe have creds stored locally? (obviously hashed...)
         if self._set_current_user(user_id, pwd):
@@ -59,33 +81,33 @@ class Manager:
             self.window.main_menu_frame()
             return
         self.window.popup(text="Invalid Username or Password")
-        
+
 
 
         return False # placeholder return value
-    
+
     def getSkillByID(self, skill_id: str) -> Skill|None:
         for skill in self.skills:
             if skill.skillId == skill_id:
                 return skill
         return None
-    
+
     def getEmployeeByID(self, emp_id: str) -> Employee|None:
         for emp in self.employees:
             if emp.emp_id == emp_id:
                 return emp
         return None
-    
+
     def getEquipmentByID(self, equip_id: str) -> Equipment|None:
         for equip in self.equipment:
             if equip.equipId == equip_id:
                 return equip
         return None
-    
+
     def checkIn(self, equip: Equipment, emp:Employee|None=None, notes: list[str]=[]) -> None:
         if emp is None:
             emp = self.current_user
-        
+
         # handle errors
         error_msg = ""
         if equip.borrower_id is None:
@@ -124,7 +146,7 @@ class Manager:
            error_msg += "Employee cannot checkout due to checkout limitations.\n"
         missing_skills = equip.getMissingSkills(emp=emp)
         if len(missing_skills) != 0:
-            error_msg += f"Missing skills for Equipment: \n {'\n'.join(['   ' + self.getSkillByID(skillID).name for skillID in missing_skills])}" 
+            error_msg += f"Missing skills for Equipment: \n {'\n'.join(['   ' + self.getSkillByID(skillID).name for skillID in missing_skills])}"
 
         if error_msg != "":
             self.window.popup(text=error_msg)
@@ -136,11 +158,11 @@ class Manager:
         # finish
         equip.borrower_id = emp.emp_id
         emp.borrowedEquipIds.append(equip.equipId)
-        
+
         self.window.checkOut()
         self.window.popup(text="Check Out Successful", isError=False)
 
     def logLost(self, equip: Equipment, emp:Employee|None, notes: list[str]=[]):
         self.logs.append(Log(date=datetime.now(), logCode=LOG_CODES.LOST, empId=emp.emp_id, equipId=equip.equipId, notes=notes))
-        
-                         
+
+

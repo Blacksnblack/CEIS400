@@ -226,3 +226,9 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
+
+# csv files, if the star doesn't ignore all the files, then I can uncomment the following lines.
+# employees.csv
+# equipment.csv
+# skills.csv
+*.csv
