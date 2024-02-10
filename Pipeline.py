@@ -3,41 +3,7 @@ from datetime import datetime
 from dataStructures import *
 from collections.abc import Callable # for having the types of functions which is called callable
 
-"""
-The data thats going to be sent to the filters and pipeline will be:
-- Logs
-- Number of employees/skills/equipment
 
-The logs look like:
-class Log:
-    date: datetime
-    logCode: int  <- it's a number that represents if the log was for a checkout, checkin or Lost (more can be added later if needed)
-    empId: str
-    equipId: str  
-    notes: list[str]  <- these aren't and probably won't be implemented
-
-I would focus on making filters that check:
-- how many logs have the "Lost" logCode (or even how many logs have each logcode has [perhaps a function that you give the logCode and it filters out and pops up how many are left?])
-- What is the percentage of Lost equipment in comparison to total number of equipment
-- how often are items checked in? checked out? lost? (use a filter on the datetimes of the logs)
-- 
-
-	
-so your initial report will probably look like this:
-
-report = {
-"header": "HEADER HERE",
-"data": {
-	"logs": [log0, log1, log2...],
-	"numEmployees": num,
-	"numSkills": num,
-	"numEquipment": num
-	}
-}
-
-so your filters going forward probably need to work around that format
-
-"""
 
 class Pipeline:
 	_report_template = {"header": "", "data": {}}
@@ -98,24 +64,31 @@ def update_header(report: dict, text: str=f"Report {datetime.strftime(datetime.n
 
 def num_lost_equipment(report: dict):
 	if "logs" not in report["data"]:
-		return
+		return 
 	count = [log.logCode for log in report["data"]["logs"]].count(LOG_CODES.LOST)
 	report['data']['numLostEquipment'] = count
 	return report
 
 def calculate_percentage_lost(report: dict):
-	pass # TODO: implement
-
+    return (report:dict) * 100
+    return report
+   
 def calc_frequency_of(logCode: int, report: dict):
-	pass # TODO: implement
+    frequency = [logCode.count for logCode in report]
+    return dict(list(zip(logCode,frequency)))
+    return report
 
-# TODO: add more filters here and make sure to update the Filters class with them
+def calc_datetimes_of(checkedin:int, checkedout:int, lost: int, report:dict)
+    datetimes = [checkedin.times, checkedout.times, lost.times for checkedin, checkedout, lost in report]
+    return dict(list(zip(checkedin, checkedout, lost, datetimes)))
+    return report
 
 class Filters(Enum): # easier to access all the filters ex: Filters.update_header (autocomplete will )
 	update_header = update_header
 	num_lost_equipment = num_lost_equipment
 	calculate_percentage_lost = calculate_percentage_lost
 	calc_frequency_of = calc_frequency_of
+        calc_datetimes_of = calc_datetimes_of
 
 
 
@@ -154,14 +127,11 @@ def do_test():
 	new_report = pipeline.executeFilters() # need to call this to have the filters work
 	print_report(new_report)
       
-	# here's how to use the update_header() filter using the text variable
-	func = lambda report: update_header(report, text="MY NEW HEADER") # create another function that gives passes something in to update_header 's text variable
-	"""
-	In case you don't know what lambda functions are:
-	The above 'func' the same as the following but in one line:
-	def func(report):
-		update_header(report, text="MY NEW HEADER")
-	"""
+	# the update_header() filter using the text variable
+def func(report):
+	update_header(report, text="MY NEW HEADER")
+    print report
+
 	pipeline.addFilter(func) 
 	new_report = pipeline.executeFilters()
 	print_report(new_report)
@@ -180,3 +150,8 @@ def do_test():
     
 if __name__=="__main__": # standard to show that this file is runnable but this is just temporary for testing
 	do_test()
+	print_report(new_report)
+
+    
+if __name__=="__main__": # standard to show that this file is runnable but this is just temporary for testing
+	do_test(
