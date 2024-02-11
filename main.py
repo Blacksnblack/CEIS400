@@ -3,7 +3,7 @@ from dataStructures import Employee, Equipment, Skill
 from hashlib import sha256
 from debug_code import get_debug_values
 
-DEBUG = True
+DEBUG = False
 
 def main():
     emps, skills, equips = [], [], [] # Note: without any employee objs, you cannot loggin...

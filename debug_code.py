@@ -2,7 +2,7 @@ from dataStructures import Employee, Equipment, Skill
 from hashlib import sha256
 from random import choice, randint
 
-DEBUG = True
+DEBUG = False
 
 def get_debug_values():
     skills: list[Skill] = []

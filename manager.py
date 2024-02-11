@@ -2,16 +2,12 @@ from GUI import GUI
 from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill, Log, LOG_CODES
 from datetime import datetime
-from csv_database import (
-    read_employees_from_csv,
-    write_employees_to_csv,
-    read_equipment_from_csv,
-    write_equipment_to_csv,
-    read_skills_from_csv,
-    write_skills_to_csv
-)
+from csv_database import *
 
-DEBUG = True  # obviously for debugging...
+def hash(text):
+    return sha256(text.encode('utf-8')).hexdigest()
+
+DEBUG = False  # obviously for debugging...
 
 class Manager:
     def __init__(self, checkoutLimit=1, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None, logs=None) -> None:
@@ -24,8 +20,8 @@ class Manager:
             equipment = []
         self.equipment: list[Equipment] = equipment
 
-        if employees is None:
-            employees = []
+        if employees is None or len(employees) == 0:
+            employees = [] # default user
         self.employees: list[Employee] = employees
 
         if termEmployees is None:
@@ -42,22 +38,31 @@ class Manager:
 
         self.current_user = None
 
-        def load_data_from_csv(self):
-            self.employees = read_employees_from_csv("employees.csv")
-            self.equipment = read_equipment_from_csv("equipment.csv")
-            self.skills = read_skills_from_csv("skills.csv")
-            # Load other data from CSV files if and as needed
-
-        def save_data_to_csv(self):
-            write_employees_to_csv(self.employees, "employees.csv")
-            write_equipment_to_csv(self.equipment, "equipment.csv")
-            write_skills_to_csv(self.skills, "skills.csv")
-            # Save other data to CSV files if and as needed
-
+        if any([not fileExits(x) for x in ["employees.csv", 'equipment.csv', 'skills.csv', 'logs.csv']]):
+            self.save_data_to_csv()
         self.load_data_from_csv()  # Load data from CSV files when the Manager instance is created/called
+        if len(self.employees) == 0:
+            self.employees = [Employee(name="admin", password_hash=hash("admin"), emp_id="admin", contactInfo="", isAdmin=True)] # default user
 
+        print(self.logs)
         self.window.mainloop()
 
+
+    def load_data_from_csv(self):
+        self.employees = read_employees_from_csv("employees.csv")
+        self.equipment = read_equipment_from_csv("equipment.csv")
+        self.skills = read_skills_from_csv("skills.csv")
+        self.logs = read_logs_from_csv('logs.csv')
+        # Load other data from CSV files if and as needed
+        print("Load", [[x.name, x.isAdmin] for x in self.employees])
+
+    def save_data_to_csv(self):
+        print("Save", [[x.name, x.isAdmin] for x in self.employees])
+        write_employees_to_csv(self.employees, "employees.csv")
+        write_equipment_to_csv(self.equipment, "equipment.csv")
+        write_skills_to_csv(self.skills, "skills.csv")
+        write_logs_to_csv(self.logs, 'logs.csv')
+        # Save other data to CSV files if and as needed
 
     def _set_current_user(self, user_id: str, pwd_hash: str) -> bool:
         if len(self.employees) == 0:
@@ -126,6 +131,9 @@ class Manager:
         equip.borrower_id = None
         emp.borrowedEquipIds.remove(equip.equipId)
 
+        if equip.isLost:
+            equip.isLost = False
+
         self.window.checkIn()
         self.window.popup(text="Check In Successful", isError=False)
 
@@ -138,7 +146,7 @@ class Manager:
 
         # handle errors
         error_msg = ""
-        if equip.borrower_id is not None:
+        if equip.borrower_id not in [None, '']:
             error_msg += "Equipment is not available.\n"
         if emp.numLostEquips > self.lostLimit:
             error_msg += "Employee cannot checkout due to lost limitations.\n"
@@ -165,4 +173,41 @@ class Manager:
     def logLost(self, equip: Equipment, emp:Employee|None, notes: list[str]=[]):
         self.logs.append(Log(date=datetime.now(), logCode=LOG_CODES.LOST, empId=emp.emp_id, equipId=equip.equipId, notes=notes))
 
+    def getLogs(self) -> list[Log]:
+        return self.logs
+    
+    def getNumEquipment(self) -> int:
+        return len(self.equipment)
+    
+    def getNumEmployees(self) -> int:
+        return len(self.employees)
+    
+    def getNumSkills(self) -> int:
+        return len(self.skills)
 
+    def removeEmp(self, emp, items):
+        errorMSG = ""
+        if len(self.employees) == 1:
+            errorMSG += "Cannot Delete User: Last User\n"
+        if [x.isAdmin for x in self.employees].count(True) == 1 and emp.isAdmin:
+            errorMSG += "Cannot Delete User: Last Admin\n"
+        if self.current_user == emp:
+            errorMSG += "Cannot Delete User: Currently Logged in as User\n"
+        if len(errorMSG) != 0:
+            self.window.popup(errorMSG)
+            return
+
+        self.employees.remove(emp)
+        self.window.ManageItems(t=Employee, items=items)
+        self.window.popup(text="Successfully Deleted the User", isError=False)
+
+    def removeEquipment(self, equip, items):
+        self.equipment.remove(equip)
+        self.window.ManageItems(t=Equipment, items=items)
+        self.window.popup(text="Successfully Deleted the Equipment", isError=False)
+
+    def removeSkill(self, skill, skills: list[Skill], items, selection_index, t):
+        self.skills.remove(skill)
+        if skill in skills:
+            skills.remove(skill)
+        self.window.manageSkills(skills=skills, items=items, selection_index=selection_index, t=t)

@@ -1,16 +1,21 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataStructures import *
 from collections.abc import Callable 
 
-DEBUG = True
+DEBUG = False
 
 class Pipeline:
 	_report_template = {"header": f"Report {datetime.strftime(datetime.now(), '%m/%d/%Y %I:%M%p')}", "data": {}}
 
-	def __init__(self, report: dict = _report_template, filters: list[Callable] = []):
+	def __init__(self, report: dict = _report_template, filters: list[Callable] = [], data: list=None):
 		self.filters: list[Callable] = filters
 		self.report: dict = report # basic initialization of report
+		if data is not None and isinstance(data, list) and len(data) == 4:
+			self.addLogs(data[0])
+			self.addNumEmployees(data[1])
+			self.addNumEquipment(data[2])
+			self.addNumSkills(data[3])
 		
 	# ----data inputs------                     
 	def addLogs(self, logs: list[Log]) -> None:
@@ -38,12 +43,10 @@ class Pipeline:
  
 	def executeFilters(self) -> dict|None:
 		if not self.hasAllData():
-			if DEBUG:
-				print("Missing Data...")
-			return
+			return {"Missing Data..."}
 		for report_filter in self.filters: # Order of filters matter
 			self.report = report_filter(self.report)
-		return self.getReport()
+		return self.report
     
 	def clear_filters(self) -> None:
 		self.filters.clear()
@@ -68,6 +71,10 @@ class Pipeline:
 	# --------------------
 
 
+# MISC
+def getLogCodeName(logCode: LOG_CODES) -> str:
+	return {v:k for k,v in LOG_CODES.__dict__.items() if v in [LOG_CODES.LOST, LOG_CODES.CHECKIN, LOG_CODES.CHECKOUT]}[logCode]
+
 # Filters
 def update_header(report: dict, text: str=f"Report {datetime.strftime(datetime.now(), '%m/%d/%Y %I:%M%p')}") -> dict:
 	report['header'] = text
@@ -82,32 +89,50 @@ def calculate_percentage_lost(report: dict) -> dict:
 	if 'numLostEquipment' not in report['data']:
 		report = num_lost_equipment(report)
 	numLost: int = report['data']['numLostEquipment']
-	report['data']['percentageLost'] = f"{round(numLost / report['data']['numEquipment'] * 100, 2) } %"
+	if report['data']['numEquipment'] != 0:
+		report['data']['percentageLost'] = f"{round(numLost / report['data']['numEquipment'] * 100, 2) } %"
+	else:
+		report['data']['percentageLost'] = f"N/A"
 	return report
    
-def calc_frequency_of(logCode: int, report: dict):
-	print(logCode)
+def _calc_frequency_of(logCode: int, report: dict):
+	logCodeName = getLogCodeName(logCode=logCode)
+	if len(report['data']['logs']) == 0:
+		report['data'][f'frequencyOf{logCodeName}'] = "NA"
 	frequency = [log.logCode for log in report['data']['logs']].count(logCode)
-	logCodeName = {v:k for k,v in LOG_CODES.__dict__.items() if v in [LOG_CODES.LOST, LOG_CODES.CHECKIN, LOG_CODES.CHECKOUT]}[logCode]
 	report['data'][f'frequencyOf{logCodeName}'] = frequency
 	return report
 
-def calc_datetimes_of(logCode: int, report:dict, start_date: datetime, end_date: datetime):
-	# not sure what you were going for but this will give a list of all logs with a certain logCode in a certain range of dates
+def _calc_datetimes_of(logCode: int, report:dict, start_date: datetime, end_date: datetime=datetime.today()):
+	logCodeName = getLogCodeName(logCode=logCode)
+	if len(report['data']['logs']) == 0:
+		report['data'][f'dateTimesOf{logCodeName}'] = "NA"
 	datetimes = [log.date for log in report['data']['logs'] if log.logCode == logCode and (start_date <= log.date <= end_date)]
-	logCodeName = {v:k for k,v in LOG_CODES.__dict__.items() if v in [LOG_CODES.LOST, LOG_CODES.CHECKIN, LOG_CODES.CHECKOUT]}[logCode]
 	report['data'][f'dateTimesOf{logCodeName}'] = datetimes
 	return report
 
-class Filters(Enum): # easier to access all the filters ex: Filters.update_header (autocomplete will )
-	update_header = update_header
-	num_lost_equipment = num_lost_equipment
-	calculate_percentage_lost = calculate_percentage_lost
-	calc_frequency_of = calc_frequency_of
-	calc_datetimes_of = calc_datetimes_of
 
-
-
+AllFilters = [
+	{"name": "Update Header", "func": update_header},
+	{"name": "Calculate Number of Lost Equipment", "func": num_lost_equipment},
+	{"name": "Calculate Percentage Of Lost Equipment", "func": calculate_percentage_lost}] + [
+	{"name": f"Calculate Frequency of Lost Equipment", "func":  lambda report: _calc_frequency_of(logCode=LOG_CODES.LOST, report=report)},
+	{"name": "Calculate Frequency of Checked-In Equipment", "func": lambda report: _calc_frequency_of(logCode=LOG_CODES.CHECKIN, report=report)},
+	{"name": "Calculate Frequency of Checked-Out Equipment", "func": lambda report: _calc_frequency_of(logCode=LOG_CODES.CHECKOUT, report=report)}
+	] + [
+	{
+		"name": "Get Dates and times of Lost Equipment in last day", 
+		"func": lambda report: _calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=1))
+	},
+	{
+		"name": "Get Dates and times of Lost Equipment in last day",
+		"func": lambda report: _calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=7))	
+	},
+	{
+		"name": "Get Dates and times of Lost Equipment in last month",
+		"func": lambda report: _calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=30))
+	}
+	]
 
 
 # --------------------------------------- everything after this point is temporary / for testing ---------------------------------------------------

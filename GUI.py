@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter.ttk import Frame, Label, Button, Style, Combobox
-from tkinter import StringVar, Entry
+from tkinter import StringVar, Entry, Listbox, Scrollbar
 from typing import Protocol
 from hashlib import sha256
-from dataStructures import Employee, Equipment, Skill
+from dataStructures import Employee, Equipment, Skill, Log
 from customWidgets import ListFrame
+from Pipeline import AllFilters, Pipeline
+from collections.abc import Callable 
 
 
 DEBUG = True  # for debugging...
@@ -37,6 +39,27 @@ class Manager(Protocol):  # for accessing Manager class without circular importi
     def logLost(self, equip: Equipment, emp:Employee|None):
         ...
     
+    def save_data_to_csv(self):
+        ...
+
+    def getLogs(self) -> list[Log]:
+        ...
+    
+    def getNumEquipment(self) -> int:
+        ...
+    
+    def getNumEmployees(self) -> int:
+        ...
+    
+    def getNumSkills(self) -> int:
+        ...
+    
+    def removeEquipment(self, equip, items):
+        ...
+
+    def removeSkill(self, skill, skills: list[Skill], items, selection_index, t):
+        ...
+
 def do_grid(root: Frame, cols: int, rows: int) -> None:  # creates a grid in root
         for i in range(cols):
             root.grid_columnconfigure(i, weight=1)
@@ -69,9 +92,14 @@ class GUI(tk.Tk):
         s = Style()
         s.configure('a20.TButton', font=('Arial', 20))
 
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
         self.login_frame()  # open login screen
 
-    
+    def on_close(self):
+        self.manager.save_data_to_csv()
+        self.destroy()
+
     def clear_current_frame(self) -> None:
         if self.current_frame is not None:
             for child in self.current_frame.winfo_children(): 
@@ -155,13 +183,13 @@ class GUI(tk.Tk):
             buttons.append(btn)
 
         if self.manager.current_user.isAdmin:
-            btn = new_button(root=self.current_frame, text="Manage Employees", command=lambda : self.ManageItems(items=self.manager.employees))
+            btn = new_button(root=self.current_frame, text="Manage Employees", command=lambda : self.ManageItems(t=Employee, items=self.manager.employees))
             btn.grid(row=i+3, column=0, sticky="nesw", columnspan=cols)
 
-            btn = new_button(root=self.current_frame, text="Manage Equipment", command=lambda: self.ManageItems(items=self.manager.equipment))
+            btn = new_button(root=self.current_frame, text="Manage Equipment", command=lambda: self.ManageItems(t=Equipment, items=self.manager.equipment))
             btn.grid(row=i+4, column=0, sticky="nesw", columnspan=cols)
 
-            btn = new_button(root=self.current_frame, text="Manage Skills", command=lambda: self.manageSkills(self.manager.skills, None, None))
+            btn = new_button(root=self.current_frame, text="Manage Skills", command=lambda: self.manageSkills(self.manager.skills, None, None, None))
             btn.grid(row=i+5, column=0, sticky="news", columnspan=cols)
 
 
@@ -237,7 +265,7 @@ class GUI(tk.Tk):
         new_label(root=self.current_frame, text="Check-Out").grid(row=0, column=0, columnspan=cols, sticky="nesw")
 
         new_label(root=self.current_frame, text="Select Equipment").grid(row=rows//2, column=0, columnspan=2)
-        equips = [equip for equip in self.manager.equipment if equip.borrower_id is None]
+        equips = [equip for equip in self.manager.equipment if equip.borrower_id in [None, '']]
         values=[equip.name for equip in equips]
         combo = Combobox(master=self.current_frame, state="readonly", values=values, font=("Arial", 20), justify="center")
         combo.grid(row=rows//2, column=2, columnspan=cols-1, sticky="nesw")
@@ -247,10 +275,64 @@ class GUI(tk.Tk):
         new_button(root=self.current_frame, text="Check-Out", command= lambda: self.manager.checkout(equips[combo.current()])).grid(row=rows-1, column=cols//2, columnspan=cols//2, sticky="nesw")
 
 
-    def Reports(self) -> None:
-        # TODO: implement with pipeline
+    def Reports(self, UnselectedFilters:list[dict]=AllFilters, SelectedFilters:list[dict]=[]) -> None:
+        def addFunc():
+            SelectedFilters.append(UnselectedFilters.pop(comboUnselected.current()))
+            self.Reports(UnselectedFilters=UnselectedFilters, SelectedFilters=SelectedFilters)
+        def removeFunc():
+            UnselectedFilters.append(SelectedFilters.pop(comboSelected.current()))
+            self.Reports(UnselectedFilters=UnselectedFilters, SelectedFilters=SelectedFilters)
+
         self.clear_current_frame()
-        self._not_implemented()
+        do_grid(root=self.current_frame, cols=(cols:=6), rows=(rows:=4))
+
+        comboUnselected = Combobox(master=self.current_frame, state="readonly", values=[x['name'] for x in UnselectedFilters], font=("Arial", 20), justify="center")
+        comboUnselected.grid(row=1, column=0, columnspan=2*cols//3, sticky="nesw")
+
+        new_button(root=self.current_frame, text="Add", command=addFunc).grid(row=1, column=2*cols//3, columnspan=cols//3, sticky="news")
+
+        comboSelected = Combobox(master=self.current_frame, state="readonly", values=[x['name'] for x in SelectedFilters], font=("Arial", 20), justify="center")
+        comboSelected.grid(row=2, column=0, columnspan=2*cols//3, sticky="nesw")
+        
+        new_button(root=self.current_frame, text="Remove", command=removeFunc).grid(row=2, column=2*cols//3, columnspan=cols//3, sticky="news")
+
+        new_button(root=self.current_frame, text="Back", command=self.main_menu_frame).grid(row=3, column=0, columnspan=cols//2, sticky="news")
+        new_button(root=self.current_frame, text="Run Report", command=lambda: self.reportPage(UnselectedFilters=UnselectedFilters, SelectedFilters=SelectedFilters)).grid(row=3, column=cols//2, columnspan=cols//2, sticky="news")
+
+
+    def reportPage(self, UnselectedFilters:list[dict], SelectedFilters:list[dict]):
+        self.clear_current_frame()
+        do_grid(root=self.current_frame, cols=(cols:=20), rows=(rows:=10))
+
+        if len(SelectedFilters) == 0:
+            self.popup(text="Report is blank.")
+            self.Reports(UnselectedFilters=UnselectedFilters, SelectedFilters=SelectedFilters)
+            return
+        p = Pipeline(filters=[x['func'] for x in SelectedFilters], data=[self.manager.getLogs(), self.manager.getNumEmployees(), self.manager.getNumEquipment(), self.manager.getNumSkills()])
+        report: dict = p.executeFilters()
+        report['data'].pop('logs')
+        vals = [f"{report['header']}"]
+        for k,v in report['data'].items():
+            if isinstance(v, list):
+                vals.append(f"{k}")
+                for item in v:
+                    vals.append(f"     {item}")
+            else:
+                vals.append(f"{k} : {v}")
+        lbox = Listbox(master=self.current_frame)
+        lbox.grid(column=0, row=0, rowspan=rows-1, columnspan=cols-1, sticky="news")
+
+        scrollbar = Scrollbar(self.current_frame)
+        scrollbar.grid(column=cols-1, row=0, rowspan=rows-1, sticky="news")
+
+        lbox.configure(yscrollcommand=scrollbar.set)
+        scrollbar.configure(command=lbox.yview)
+
+        for v in vals:
+            lbox.insert('end', v)
+        new_button(root=self.current_frame, text="Back", command=lambda: self.Reports(UnselectedFilters=UnselectedFilters, SelectedFilters=SelectedFilters)).grid(column=0, row=rows-1, columnspan=cols, sticky="news")
+        
+
 
     def UserDetails(self) -> None:
         user = self.manager.current_user
@@ -291,9 +373,9 @@ class GUI(tk.Tk):
         
 
     
-    def ManageItems(self, items: list[Equipment|Employee]=None, selection_index: None|int=None) -> None:  # this function handles Equipment and Employee obj Handling
+    def ManageItems(self, t, items: list[Equipment|Employee]=None, selection_index: None|int=None) -> None:  # this function handles Equipment and Employee obj Handling
         if selection_index is None:
-            self._getSelection(items=items)
+            self._getSelection(items=items, t=t)
             return
         if DEBUG:
             print(f"Selection Index: {selection_index}")
@@ -302,7 +384,7 @@ class GUI(tk.Tk):
         cols, rows = 6, 10
         do_grid(self.current_frame, cols=cols, rows=rows)
         new_label(self.current_frame, text=items[selection_index].name).grid(column=0, row=0, columnspan=cols)
-        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(items=items)).grid(column=0, row=rows-1, columnspan=cols//2, sticky="nesw") # back button
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t=t, items=items)).grid(column=0, row=rows-1, columnspan=cols//2, sticky="nesw") # back button
         new_button(root=self.current_frame, text="Save", command=lambda: self._save_changes(savingObj=items[selection_index])).grid(column=cols//2, row=rows-1, columnspan=cols//2, sticky="nesw") # save button
         if isinstance(items[0], Employee): # Selection is Employee
             new_label(self.current_frame, text="Name").grid(row=1, column=0, columnspan=cols//3, sticky="nesw")
@@ -327,7 +409,7 @@ class GUI(tk.Tk):
 
             new_label(self.current_frame, text=f"Number of Lost Equipment: {items[selection_index].numLostEquips}").grid(row=5, column=0, columnspan=cols, sticky="news")
 
-            new_button(self.current_frame, text="Edit Skills", command=lambda: self.editSkills(currentObj=items[selection_index], items=items, selection_index=selection_index)).grid(row=6, column=0, columnspan=cols//2, sticky="nesw")
+            new_button(self.current_frame, text="Edit Skills", command=lambda: self.editSkills(currentObj=items[selection_index], items=items, selection_index=selection_index, t=t)).grid(row=6, column=0, columnspan=cols//2, sticky="nesw")
 
             new_button(self.current_frame, text="Change Password", command=lambda: self._change_password(items=items, selection_index=selection_index)).grid(row=6, column=cols//2, columnspan=cols//2, sticky="nesw")
 
@@ -336,6 +418,8 @@ class GUI(tk.Tk):
             new_label(root=self.current_frame, text="Admin Privildges").grid(row=7, column=0, columnspan=cols//2, sticky="news")
             self.reusableStringVars[3].set(f"{items[selection_index].isAdmin}")
             new_button(self.current_frame, text="", command=toggle_admin, textvariable=self.reusableStringVars[3]).grid(row=7, column=cols//2, columnspan=cols//2, sticky="news")
+
+            new_button(root=self.current_frame, text="DELETE USER", command=lambda: self.manager.removeEmp(items[selection_index], items)).grid(row=8, column=0, columnspan=cols, sticky="news")
 
         elif isinstance(items[0], Equipment): # Selection is Equipment
             new_label(self.current_frame, text="Name").grid(row=1, column=0, columnspan=cols//3, sticky="nesw")
@@ -356,16 +440,19 @@ class GUI(tk.Tk):
             combo = Combobox(master=self.current_frame, state="readonly", values=values, font=("Arial", 20), justify="center")
             combo.current(0 if len(values) > 0 else None)
             combo.grid(row=4, column=cols//3, columnspan=2*cols//3, sticky="nesw")
+
+            new_button(root=self.current_frame, text="DELETE EQUIPMENT", command=lambda: self.manager.removeEquipment(equip=items[selection_index], items=items)).grid(row=6, column=0, columnspan=cols, sticky="news")
         else:
             self.popup("Error : Selected Item isn't Equipment or Employee class for some reason...")  # this should never happen
 
-    def editSkills(self, currentObj: Employee|Equipment, items, selection_index):
-        if isinstance(currentObj, Employee):
-            self.manageSkills(currentObj.skillIds, items, selection_index)
-            return
-        self.manageSkills(currentObj.skillRequirementsIDs, items, selection_index)
+    def editSkills(self, currentObj: Employee|Equipment, items, selection_index, t=None):
+        if t == Employee:
+            skills = currentObj.skillIds
+        else:
+            skills = currentObj.skillRequirementsIDs
+        self.manageSkills(skills, items, selection_index, t)
         
-    def editSkill(self, skill: Skill, skills: list[Skill], items, selection_index):
+    def editSkill(self, skill: Skill, skills: list[Skill], items, selection_index, t=None):
         self.clear_current_frame()
         do_grid(self.current_frame, cols=(cols:=3), rows=5)
         self.reusableStringVars[0].set(skill.name)
@@ -379,7 +466,7 @@ class GUI(tk.Tk):
         new_label(root=self.current_frame, text="Skill ID").grid(row=2, column=0, columnspan=1, sticky="news")
         Entry(master=self.current_frame, textvariable=self.reusableStringVars[1], justify="center", font=("Arial", 20)).grid(row=2, column=1, columnspan=cols-1, sticky="news")
         
-        back_func = lambda: self.manageSkills(skills, items, selection_index)
+        back_func = lambda: self.manageSkills(skills, items, selection_index, t)
         def saveSkill():
             # TODO: if skill id changes, need to find all references and change the references
             # TODO: need to check for clashes with skillIDs here
@@ -390,24 +477,26 @@ class GUI(tk.Tk):
         new_button(root=self.current_frame, text="Save", command=saveSkill).grid(row=3, column=0, columnspan=cols, sticky="news")
         new_button(root=self.current_frame, text="Back", command=back_func).grid(row=4, column=0, columnspan=cols, sticky="news")
 
-    def manageSkills(self, skills:list[Skill], items, selection_index):
+    def manageSkills(self, skills:list[Skill], items, selection_index, t=None):
         self.clear_current_frame()
-        do_grid(self.current_frame, cols=(cols:=3), rows=(rows:=6))
+        do_grid(self.current_frame, cols=(cols:=6), rows=(rows:=10))
         new_label(self.current_frame, text="Select Skill").grid(row=0, column=0, columnspan=cols, sticky="news")
 
         combo = Combobox(master=self.current_frame, state="readonly", values=[x.name for x in skills], font=("Arial", 20), justify="center")
         combo.current(0 if len(skills) > 0 else None)
         combo.grid(row=1, column=0, columnspan=cols, sticky="nesw")
 
-        new_button(root=self.current_frame, text="Select", command=lambda: self.editSkill(skills[combo.current()], skills, items, selection_index)).grid(row=3, column=0, columnspan=cols, sticky="news")
+        new_button(root=self.current_frame, text="Select", command=lambda: self.editSkill(skills[combo.current()], skills, items, selection_index, t) if len(skills)>0 else "").grid(row=3, column=0, columnspan=cols//2, sticky="news")
         
+        new_button(root=self.current_frame, text="DELETE SKILL", command=lambda: self.manager.removeSkill(skills[combo.current()], skills, items, selection_index, t) if len(skills) > 0 else "").grid(row=3, column=cols//2, columnspan=cols//2, sticky="news")
+
         def newSkill():
             self.manager.skills.append((newSkill:=Skill(name="", skillId="")))
-            self.editSkill(newSkill, skills=skills + [newSkill])
-        new_button(root=self.current_frame, text="New Skill", command=newSkill).grid(row=4, column=0, columnspan=cols, sticky="news")
-        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(items, selection_index) if items is not None else self.main_menu_frame()).grid(row=5, column=0, columnspan=cols, sticky="news")
+            self.editSkill(newSkill, skills=skills + [newSkill], items=items, selection_index=selection_index, t=t)
+        new_button(root=self.current_frame, text="New Skill", command=newSkill).grid(row=8, column=0, columnspan=cols, sticky="news")
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t, items, selection_index) if items is not None else self.main_menu_frame()).grid(row=9, column=0, columnspan=cols, sticky="news")
     
-    def _getSelection(self, items: list[Equipment | Employee]):
+    def _getSelection(self, items: list[Equipment | Employee], t):
         self.clear_current_frame()
         do_grid(root=self.current_frame, cols=2, rows=6)
         new_label(root=self.current_frame, text="Make a Selection").grid(row=0, column=0, columnspan=2, sticky="nesw")
@@ -416,33 +505,35 @@ class GUI(tk.Tk):
         buttons_data = [{"gui":self, "i":i, "items":items, "item":x} for i, x in enumerate(items)]
         ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100)
         new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, sticky="nesw")
-        if isinstance(items[0], Equipment):
-            func = lambda: self.addNewEquipment()
+        if t == Equipment:
+            func = lambda: self.addNewEquipment(items=items)
         else: # instance of Employee
-            func = lambda: self.addNewEmployee()
+            func = lambda: self.addNewEmployee(items=items)
+        
         new_button(root=self.current_frame, text="Add New", command=func).grid(row=5, column=1, sticky="nesw")
     
-    def addNewEquipment(self):
+    def addNewEquipment(self, items: list[Equipment]):
         if not self.manager.current_user.isAdmin:
             self.popup("Admin Priviliges Needed")
             return
         equip = Equipment(equipId="", name="")
         self.manager.equipment.append(equip)
-        self.ManageItems(items=[equip], selection_index=0)
+        self.ManageItems(t=Equipment, items=self.manager.equipment, selection_index=len(self.manager.equipment)-1)
 
-    def addNewEmployee(self):
+    def addNewEmployee(self, items: list[Employee]):
         if not self.manager.current_user.isAdmin:
             self.popup("Admin Priviliges Needed")
             return
         emp = Employee(emp_id="", name="", password_hash=sha256("".encode('utf-8')).hexdigest(), contactInfo="")
         self.manager.employees.append(emp)
-        self.ManageItems(items=[emp], selection_index=0)
+        self.ManageItems(t=Employee, items=self.manager.employees, selection_index=len(self.manager.employees)-1)
     
     def _save_changes(self, savingObj: Employee|Equipment):
         if isinstance(savingObj, Employee):
             vals = [var.get() for var in self.reusableStringVars[:4]]
             if vals[3]=="False" and savingObj.isAdmin and len([emp for emp in self.manager.employees if emp.isAdmin]) <= 1: # prevent zero admin accounts
                 self.popup("Cannot remove admin priviledges of last admin")
+                return
 
             savingObj.name = vals[0] # name
             # TODO: if ID changes need to look through and change references & check for clashes
@@ -493,7 +584,7 @@ class GUI(tk.Tk):
             if (txt:=self.reusableStringVars[0].get()) == self.reusableStringVars[1].get():
                 (emp:=items[selection_index]).password_hash = sha256(txt.encode("utf-8")).hexdigest()
                 if not isUserDetails:
-                    self.ManageItems(items=items, selection_index=selection_index)
+                    self.ManageItems(t=Employee, items=items, selection_index=selection_index)
                 else:
                     self.UserDetails()
                 self.popup("Password Change Successful", isError=False)
