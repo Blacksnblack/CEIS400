@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from dataStructures import *
 from collections.abc import Callable 
 
+# TODO: move Testing done at bottom into tests.py
+
 DEBUG = False
 
 class Pipeline:
@@ -136,7 +138,6 @@ AllFilters = [
 
 
 # --------------------------------------- everything after this point is temporary / for testing ---------------------------------------------------
-
 def generate_random_stuff_and_add_to_pipeline(pipeline: Pipeline):
 	# generate random logs
 	logs = [Log(date=datetime.now(), logCode=LOG_CODES.LOST, empId=0, equipId=0, notes=[])] * 9
@@ -186,14 +187,14 @@ def do_test():
 
 	print_report(pipeline.getReport())
 
-	pipeline.addFilter([Filters.update_header, Filters.num_lost_equipment])
+	pipeline.addFilter([update_header, num_lost_equipment])
 	new_report = pipeline.executeFilters()
 	print_report(new_report)
 
 	pipeline.clear_filters()
 	pipeline.resetReport()
 
-	datetime_func_lost = lambda report: calc_datetimes_of(LOG_CODES.LOST, report, 
+	datetime_func_lost = lambda report: _calc_datetimes_of(LOG_CODES.LOST, report, 
 													   datetime(year=2024, month=2, day=9, hour=0, minute=0), 
 													   datetime(year=2024, month=2, day=11, hour=23, minute=59))
 	pipeline.addFilter(datetime_func_lost)
@@ -203,9 +204,9 @@ def do_test():
 
 	pipeline.clear_filters()
 	funcs = [
-		lambda report: calc_frequency_of(LOG_CODES.CHECKIN, report), 
-		lambda report: calc_frequency_of(LOG_CODES.CHECKOUT, report), 
-		lambda report: calc_frequency_of(LOG_CODES.LOST, report),
+		lambda report: _calc_frequency_of(LOG_CODES.CHECKIN, report), 
+		lambda report: _calc_frequency_of(LOG_CODES.CHECKOUT, report), 
+		lambda report: _calc_frequency_of(LOG_CODES.LOST, report),
 		calculate_percentage_lost
 		]
 	print(funcs)

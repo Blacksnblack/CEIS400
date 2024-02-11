@@ -33,7 +33,7 @@ class Manager(Protocol):  # for accessing Manager class without circular importi
     def checkIn(self, equip: Equipment, emp:Employee|None=None, notes: list[str]=[]):
         ...
 
-    def checkout(self, equip: Equipment, emp: Employee|None, notes: list[str]=[]) -> (bool, str):
+    def checkout(self, equip: Equipment, emp: Employee|None, notes: list[str]=[]):
         ...
 
     def logLost(self, equip: Equipment, emp:Employee|None):
