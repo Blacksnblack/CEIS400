@@ -44,7 +44,6 @@ class Manager:
         if len(self.employees) == 0:
             self.employees = [Employee(name="admin", password_hash=hash("admin"), emp_id="admin", contactInfo="", isAdmin=True)] # default user
 
-        print(self.logs)
         self.window.mainloop()
 
 
@@ -54,10 +53,12 @@ class Manager:
         self.skills = read_skills_from_csv("skills.csv")
         self.logs = read_logs_from_csv('logs.csv')
         # Load other data from CSV files if and as needed
-        print("Load", [[x.name, x.isAdmin] for x in self.employees])
+        if DEBUG:
+            print("Load", [[x.name, x.isAdmin] for x in self.employees])
 
     def save_data_to_csv(self):
-        print("Save", [[x.name, x.isAdmin] for x in self.employees])
+        if DEBUG:
+            print("Save", [[x.name, x.isAdmin] for x in self.employees])
         write_employees_to_csv(self.employees, "employees.csv")
         write_equipment_to_csv(self.equipment, "equipment.csv")
         write_skills_to_csv(self.skills, "skills.csv")
@@ -148,10 +149,11 @@ class Manager:
         error_msg = ""
         if equip.borrower_id not in [None, '']:
             error_msg += "Equipment is not available.\n"
-        if emp.numLostEquips > self.lostLimit:
-            error_msg += "Employee cannot checkout due to lost limitations.\n"
-        if len(emp.borrowedEquipIds) > self.checkoutLimit:
-           error_msg += "Employee cannot checkout due to checkout limitations.\n"
+        if not emp.isAdmin:
+            if emp.numLostEquips > self.lostLimit:
+                error_msg += "Employee cannot checkout due to lost limitations.\n"
+            if len(emp.borrowedEquipIds) > self.checkoutLimit:
+                error_msg += "Employee cannot checkout due to checkout limitations.\n"
         missing_skills = equip.getMissingSkills(emp=emp)
         if len(missing_skills) != 0:
             error_msg += f"Missing skills for Equipment: \n {'\n'.join(['   ' + self.getSkillByID(skillID).name for skillID in missing_skills])}"

@@ -9,7 +9,7 @@ from Pipeline import AllFilters, Pipeline
 from collections.abc import Callable 
 
 
-DEBUG = True  # for debugging...
+DEBUG = False  # for debugging...
 
 class Manager(Protocol):  # for accessing Manager class without circular importing error
     loggedIn: bool
@@ -206,16 +206,16 @@ class GUI(tk.Tk):
             items = [self.manager.getEquipmentByID(x) for x in self.manager.current_user.borrowedEquipIds]
         do_success_popup = False
         self.clear_current_frame()
-        do_grid(root=self.current_frame, cols=2, rows=5)
+        do_grid(root=self.current_frame, cols=(cols:=2), rows=(rows:=4))
         if selection_index is not None: # selection is made
             self._set_lost(items[selection_index])
             do_success_popup=True
-        new_label(root=self.current_frame, text="Select Equipment To Report As Lost").grid(row=0, column=0, columnspan=2, sticky="nesw")
+        new_label(root=self.current_frame, text="Select Equipment To Report As Lost").grid(row=0, column=0, columnspan=cols, sticky="nesw")
         subFrame = Frame(self.current_frame)
-        subFrame.grid(row=1, column=0, columnspan=2, sticky="nesw", rowspan=4)
+        subFrame.grid(row=1, column=0, columnspan=cols, sticky="nesw", rowspan=rows-2)
         buttons_data = [{"gui":self, "i":i, "items":items, "item":x} for i, x in enumerate(items)]
         ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100, isLost=True)
-        new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, columnspan=2, sticky="nesw")
+        new_button(root=self.current_frame, text="Back", command=self.main_menu_frame).grid(row=rows-1, column=0, columnspan=cols, sticky="nesw")
         if do_success_popup: # need to do popup last so it shows up
             self.popup("Successfully reported equipment as lost", isError=False)
         
@@ -384,7 +384,7 @@ class GUI(tk.Tk):
         cols, rows = 6, 10
         do_grid(self.current_frame, cols=cols, rows=rows)
         new_label(self.current_frame, text=items[selection_index].name).grid(column=0, row=0, columnspan=cols)
-        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t=t, items=items)).grid(column=0, row=rows-1, columnspan=cols//2, sticky="nesw") # back button
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t=t, items=items, selection_index=None)).grid(column=0, row=rows-1, columnspan=cols//2, sticky="nesw") # back button
         new_button(root=self.current_frame, text="Save", command=lambda: self._save_changes(savingObj=items[selection_index])).grid(column=cols//2, row=rows-1, columnspan=cols//2, sticky="nesw") # save button
         if isinstance(items[0], Employee): # Selection is Employee
             new_label(self.current_frame, text="Name").grid(row=1, column=0, columnspan=cols//3, sticky="nesw")
@@ -429,8 +429,8 @@ class GUI(tk.Tk):
             new_label(self.current_frame, text="Equipment ID").grid(row=2, column=0, columnspan=cols//3, sticky="nesw")
             self.reusableStringVars[1].set(items[selection_index].equipId)
             Entry(master=self.current_frame, textvariable=self.reusableStringVars[1], justify="center", font=("Arial", 20)).grid(row=2, column=cols//3, columnspan=2*cols//3, sticky="nesw")
-            t = f"Borrowed By: {emp.name if (emp := self.manager.getEmployeeByID(b_id:=items[selection_index].borrower_id)) is not None and b_id is not None else "Vacant"}"
-            b_lab = new_label(self.current_frame, text=t)
+            text = f"Borrowed By: {emp.name if (emp := self.manager.getEmployeeByID(b_id:=items[selection_index].borrower_id)) is not None and b_id is not None else "Vacant"}"
+            b_lab = new_label(self.current_frame, text=text)
             b_lab.grid(row=3, column=0, columnspan=cols, sticky="nesw")
 
             new_label(self.current_frame, text="Queue").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
@@ -494,7 +494,7 @@ class GUI(tk.Tk):
             self.manager.skills.append((newSkill:=Skill(name="", skillId="")))
             self.editSkill(newSkill, skills=skills + [newSkill], items=items, selection_index=selection_index, t=t)
         new_button(root=self.current_frame, text="New Skill", command=newSkill).grid(row=8, column=0, columnspan=cols, sticky="news")
-        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t, items, selection_index) if items is not None else self.main_menu_frame()).grid(row=9, column=0, columnspan=cols, sticky="news")
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t=t, items=items, selection_index=selection_index) if items is not None else self.main_menu_frame()).grid(row=9, column=0, columnspan=cols, sticky="news")
     
     def _getSelection(self, items: list[Equipment | Employee], t):
         self.clear_current_frame()
@@ -502,13 +502,15 @@ class GUI(tk.Tk):
         new_label(root=self.current_frame, text="Make a Selection").grid(row=0, column=0, columnspan=2, sticky="nesw")
         subFrame = Frame(self.current_frame)
         subFrame.grid(row=1, column=0, columnspan=2, sticky="nesw", rowspan=4)
-        buttons_data = [{"gui":self, "i":i, "items":items, "item":x} for i, x in enumerate(items)]
+        buttons_data = [{"gui":self, "i":i, "items":items, "item":x, "t": t} for i, x in enumerate(items)]
         ListFrame(parent=subFrame, buttons_data=buttons_data, item_height=100)
         new_button(root=self.current_frame, text="Back", command=lambda: self.main_menu_frame()).grid(row=5, column=0, sticky="nesw")
         if t == Equipment:
             func = lambda: self.addNewEquipment(items=items)
-        else: # instance of Employee
+        elif t == Employee: # instance of Employee
             func = lambda: self.addNewEmployee(items=items)
+        else:
+            self.popup("Something Went wrong...")
         
         new_button(root=self.current_frame, text="Add New", command=func).grid(row=5, column=1, sticky="nesw")
     

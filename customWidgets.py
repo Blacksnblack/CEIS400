@@ -71,8 +71,8 @@ class ListFrame(ttk.Frame):
 	
 
 class ButtonVar(Button):
-	def __init__(self, frame, item, i, gui, items, *args, **kwargs):
-		super().__init__(master=frame, text=f'{item}', command=lambda: gui.ManageItems(t=Employee, items=items, selection_index=i) , style="a20.TButton", *args, **kwargs)
+	def __init__(self, frame, item, i, gui, items, t, *args, **kwargs):
+		super().__init__(master=frame, text=f'{item}', command=lambda: gui.ManageItems(t=t, items=items, selection_index=i) , style="a20.TButton", *args, **kwargs)
 
 
 class lostEquipmentButtonVar(Button):
