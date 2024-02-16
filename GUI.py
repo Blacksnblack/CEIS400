@@ -433,6 +433,8 @@ class GUI(tk.Tk):
             b_lab = new_label(self.current_frame, text=text)
             b_lab.grid(row=3, column=0, columnspan=cols, sticky="nesw")
 
+            # TODO: add way to edit requirement skills for equipment
+
             new_label(self.current_frame, text="Queue").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
             values=[emp.name for empID in items[selection_index].queue if (emp:=self.manager.getEmployeeByID(emp_id=empID)) is not None]
             if len(values) == 0:
