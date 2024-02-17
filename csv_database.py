@@ -10,7 +10,7 @@ def fileExits(filename):
         return True
     return False
 
-def write_employees_to_csv(employees, filename):
+def write_employees_to_csv(employees: list[Employee], filename):
     with open(filename, 'w+', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Name", "Password Hashed", "Employee ID", "Contact Info", "Borrowed Equipment IDs", "Skill IDs", "Number of Lost Equipments", "Is Admin"])
@@ -39,7 +39,7 @@ def read_employees_from_csv(filename):
     return employees
 
 
-def write_equipment_to_csv(equipment, filename):
+def write_equipment_to_csv(equipment: list[Equipment], filename: str):
     with open(filename, 'w+', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Equipment ID", "Name", "Borrower ID", "Skill Requirements IDs", "Queue"])
@@ -72,7 +72,7 @@ def read_equipment_from_csv(filename):
     return equipment
 
 
-def write_skills_to_csv(skills, filename):
+def write_skills_to_csv(skills: list[Skill], filename):
     with open(filename, 'w+', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Name", "Skill ID"])
