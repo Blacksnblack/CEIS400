@@ -17,6 +17,7 @@ class Manager(Protocol):  # for accessing Manager class without circular importi
     equipment: list[Equipment] | None
     employees: list[Employee] | None
     skills: list[Skill] | None
+    logs: list[Log] | None
 
     def login(self, user: str, pwd: str) -> bool:
         ...
@@ -409,7 +410,7 @@ class GUI(tk.Tk):
 
             new_label(self.current_frame, text=f"Number of Lost Equipment: {items[selection_index].numLostEquips}").grid(row=5, column=0, columnspan=cols, sticky="news")
 
-            new_button(self.current_frame, text="Edit Skills", command=lambda: self.editSkills(currentObj=items[selection_index], items=items, selection_index=selection_index, t=t)).grid(row=6, column=0, columnspan=cols//2, sticky="nesw")
+            new_button(self.current_frame, text="Edit Skills", command=lambda: self.editEmployeeSkills(items=items, selected_index=selection_index)).grid(row=6, column=0, columnspan=cols//2, sticky="nesw")
 
             new_button(self.current_frame, text="Change Password", command=lambda: self._change_password(items=items, selection_index=selection_index)).grid(row=6, column=cols//2, columnspan=cols//2, sticky="nesw")
 
@@ -433,8 +434,6 @@ class GUI(tk.Tk):
             b_lab = new_label(self.current_frame, text=text)
             b_lab.grid(row=3, column=0, columnspan=cols, sticky="nesw")
 
-            # TODO: add way to edit requirement skills for equipment
-
             new_label(self.current_frame, text="Queue").grid(row=4, column=0, columnspan=int(cols/3), sticky="nesw")
             values=[emp.name for empID in items[selection_index].queue if (emp:=self.manager.getEmployeeByID(emp_id=empID)) is not None]
             if len(values) == 0:
@@ -443,9 +442,96 @@ class GUI(tk.Tk):
             combo.current(0 if len(values) > 0 else None)
             combo.grid(row=4, column=cols//3, columnspan=2*cols//3, sticky="nesw")
 
+            # TODO: add way to edit requirement skills for equipment
+            new_button(root=self.current_frame, text="Manage Skill Requirements", command=lambda: self.editEquipmentRequirements(items=items, selected_index=selection_index)).grid(row=5, column=0, columnspan=cols, sticky="news")
+
             new_button(root=self.current_frame, text="DELETE EQUIPMENT", command=lambda: self.manager.removeEquipment(equip=items[selection_index], items=items)).grid(row=6, column=0, columnspan=cols, sticky="news")
         else:
             self.popup("Error : Selected Item isn't Equipment or Employee class for some reason...")  # this should never happen
+
+    def editEmployeeSkills(self, items: list[Employee], selected_index: int):
+        emp = items[selected_index]
+
+        self.clear_current_frame()
+        do_grid(self.current_frame, cols=(cols:=6), rows=(rows:=8))
+
+        new_label(root=self.current_frame, text="Skill Requirements").grid(row=1, column=0, columnspan=cols, sticky="news")
+
+        skill_names = [self.manager.getSkillByID(eId).name for eId in emp.skillIds]
+        combo = Combobox(master=self.current_frame, state="readonly", values=skill_names, font=("Arial", 20), justify="center")
+        combo.grid(row=3, column=0, columnspan=cols-1, sticky="news")
+
+        def remove():
+            emp.skillIds.pop(combo.current())
+            self.editEmployeeSkills(items=items, selected_index=selected_index)
+            self.popup(text="Successfully removed skill", isError=False)
+
+        new_button(root=self.current_frame, text="Remove", command=remove).grid(row=3, column=cols-1, columnspan=1, sticky="news")
+        
+        new_button(root=self.current_frame, text="Add New Skill", command=lambda: self.addNewEmpSkillRequirement(items=items, selected_index=selected_index)).grid(row=5, column=0, columnspan=cols, sticky="news")
+
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t=Employee, items=items, selection_index=selected_index)).grid(row=rows-1, column=0, columnspan=cols, sticky="news")
+
+    def editEquipmentRequirements(self, items: list[Equipment], selected_index: int):
+        equip = items[selected_index]
+
+        self.clear_current_frame()
+        do_grid(self.current_frame, cols=(cols:=6), rows=(rows:=8))
+
+        new_label(root=self.current_frame, text="Skill Requirements").grid(row=1, column=0, columnspan=cols, sticky="news")
+
+        skill_names = [self.manager.getSkillByID(eId).name for eId in equip.skillRequirementsIDs]
+        combo = Combobox(master=self.current_frame, state="readonly", values=skill_names, font=("Arial", 20), justify="center")
+        combo.grid(row=3, column=0, columnspan=cols-1, sticky="news")
+
+        def remove():
+            equip.skillRequirementsIDs.pop(combo.current())
+            self.editEquipmentRequirements(items=items, selected_index=selected_index)
+            self.popup(text="Successfully removed skill", isError=False)
+
+        new_button(root=self.current_frame, text="Remove", command=remove).grid(row=3, column=cols-1, columnspan=1, sticky="news")
+        
+        new_button(root=self.current_frame, text="Add New Skill Requirement", command=lambda: self.addNewSkillRequirement(items=items, selected_index=selected_index)).grid(row=5, column=0, columnspan=cols, sticky="news")
+
+        new_button(root=self.current_frame, text="Back", command=lambda: self.ManageItems(t=Equipment, items=items, selection_index=selected_index)).grid(row=rows-1, column=0, columnspan=cols, sticky="news")
+
+    def addNewEmpSkillRequirement(self, items: list[Employee], selected_index: int):
+        self.clear_current_frame()
+        do_grid(root=self.current_frame, cols=(cols:=5), rows=(rows:=10))
+        
+        skills = [x for x in self.manager.skills if x.skillId not in items[selected_index].skillIds]
+        vals = [x.name for x in skills]
+        combo = Combobox(master=self.current_frame, state="readonly", values=vals, font=("Arial", 20), justify="center")
+        combo.grid(row=1, column=0, columnspan=cols, sticky="news")
+
+        def addNew():
+            items[selected_index].skillIds.append(skills[combo.current()].skillId)
+            self.addNewEmpSkillRequirement(items=items, selected_index=selected_index)
+            self.popup(text="Successfully added New skill to Employee.", isError=False)
+
+        new_button(root=self.current_frame, text="Add", command=addNew).grid(row=3, column=0, columnspan=cols, sticky="news")
+
+        new_button(root=self.current_frame, text="Back", command=lambda: self.editEmployeeSkills(items=items, selected_index=selected_index)).grid(row=rows-1, column=0, columnspan=cols, sticky="news")
+
+
+    def addNewSkillRequirement(self, items: list[Equipment], selected_index: int):
+        self.clear_current_frame()
+        do_grid(root=self.current_frame, cols=(cols:=5), rows=(rows:=10))
+        
+        skills = [x for x in self.manager.skills if x.skillId not in items[selected_index].skillRequirementsIDs]
+        vals = [x.name for x in skills]
+        combo = Combobox(master=self.current_frame, state="readonly", values=vals, font=("Arial", 20), justify="center")
+        combo.grid(row=1, column=0, columnspan=cols, sticky="news")
+
+        def addNew():
+            items[selected_index].skillRequirementsIDs.append(skills[combo.current()].skillId)
+            self.addNewSkillRequirement(items=items, selected_index=selected_index)
+            self.popup(text="Successfully added New skill requirement to equipment.", isError=False)
+
+        new_button(root=self.current_frame, text="Add", command=addNew).grid(row=3, column=0, columnspan=cols, sticky="news")
+
+        new_button(root=self.current_frame, text="Back", command=lambda: self.editEquipmentRequirements(items=items, selected_index=selected_index)).grid(row=rows-1, column=0, columnspan=cols, sticky="news")
+
 
     def editSkills(self, currentObj: Employee|Equipment, items, selection_index, t=None):
         if t == Employee:
@@ -470,10 +556,25 @@ class GUI(tk.Tk):
         
         back_func = lambda: self.manageSkills(skills, items, selection_index, t)
         def saveSkill():
-            # TODO: if skill id changes, need to find all references and change the references
-            # TODO: need to check for clashes with skillIDs here
+            skill_id = self.reusableStringVars[1].get()
+            
+            # check for clashes
+            if skill_id in [skill.skillId for skill in self.manager.skills]:
+                self.popup("Error: Skill ID already exists.")
+                return
+
+            if skill.name != "" and skill.skillId != "": # not a new skill so need to update references
+                # update references
+                for emp in self.manager.employees: # employee references
+                    if emp.hasSkillId(skillID=skill.skillId):
+                        emp.alterSkill(skill.skillId, skill_id)
+                for equip in self.manager.equipment: # equipment references
+                    if equip.hasSkillId(skillID=skill.skillId):
+                        equip.alterSkill(skill.skillId, skill_id)
+                # skills don't need to update logs
+
             skill.name = self.reusableStringVars[0].get()
-            skill.skillId =  self.reusableStringVars[1].get()
+            skill.skillId =  skill_id
             self.popup("Skill Saved Successfully", isError=False)
 
         new_button(root=self.current_frame, text="Save", command=saveSkill).grid(row=3, column=0, columnspan=cols, sticky="news")
@@ -539,9 +640,26 @@ class GUI(tk.Tk):
                 self.popup("Cannot remove admin priviledges of last admin")
                 return
 
+            # check for clashes
+            emp_id = vals[1]
+            if emp_id in [x.emp_id for x in self.manager.employees]:
+                self.popup("Error: Employee ID already exists.")
+                return
+            
+            if savingObj.name != "" and savingObj.emp_id != "": # not new employee so need to update references
+                # equipment ref update
+                for equip in self.manager.equipment:
+                    if savingObj.emp_id == equip.borrower_id: # if ref has old ID change to new ID
+                        equip.borrower_id = emp_id
+                # log ref update
+                for log in self.manager.logs:
+                    if log.empId == savingObj.emp_id:
+                        log.empId = emp_id
+                
+
             savingObj.name = vals[0] # name
             # TODO: if ID changes need to look through and change references & check for clashes
-            savingObj.emp_id = vals[1] # Emp ID 
+            savingObj.emp_id = emp_id # Emp ID 
             savingObj.contactInfo = vals[2] # contact Info
             
             savingObj.isAdmin = True if vals[3]=="True" else False # admin
@@ -555,16 +673,6 @@ class GUI(tk.Tk):
             self.popup("Error: Object typing isn't as expected") # This should never happen
             return
         self.popup("Successfully Saved", isError=False)
-
-    def _not_implemented(self) -> None: # TODO: Delete me later | Temporary function
-        self.clear_current_frame()
-        do_grid(root=self.current_frame, cols=1, rows=4)
-
-        lab = new_label(root=self.current_frame, text="Not Implemented yet...")
-        lab.grid(row=1, column=0, sticky="nesw")
-
-        but = new_button(root=self.current_frame, text="Main Menu", command=lambda: self.main_menu_frame())
-        but.grid(row=2, column=0, sticky="nesw")
     
     def _change_password(self, items: list[Employee], selection_index: int, isUserDetails=False):
         self.clear_current_frame()

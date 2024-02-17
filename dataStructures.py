@@ -19,6 +19,14 @@ class Employee:
     
     def __repr__(self) -> str:
         return self.name
+    
+    def alterSkill(self, oldSkillId: str, newSkillId: str):
+        for i, skill in enumerate(self.skillIds):
+            if skill == oldSkillId:
+                self.skillIds[i] = newSkillId
+    
+    def hasSkillId(self, skillID: str):
+        return skillID in self.skillIds
 
 class Equipment:
     def __init__(self, equipId: str, name: str, borrower_id: None|str = None, skillRequirementsIDs: list[str]|None = None, queue: list[str]|None = None) -> None:
@@ -44,6 +52,15 @@ class Equipment:
             if skill_id not in emp.skillIds:
                 missing.append(skill_id)
         return missing
+    
+    def alterSkill(self, oldSkillId: str, newSkillId: str):
+        for i, skill in enumerate(self.skillRequirementsIDs):
+            if skill == oldSkillId:
+                self.skillRequirementsIDs[i] = newSkillId
+    
+    def hasSkillId(self, skillID: str):
+        return skillID in self.skillRequirementsIDs
+
     
 
 @dataclass
