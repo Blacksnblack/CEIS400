@@ -70,13 +70,134 @@ def persistent_data_test():
     print("- Data Saving is Persistent") # if it get's this far, success! So print result!
 
 
+# --------------------------------------- everything after this point is temporary / for testing ---------------------------------------------------
+def generate_random_stuff_and_add_to_pipeline(pipeline: Pipeline):
+    # generate 'random' logs (9 Lost Logs, 10 Checkin Logs, 11 Chekout Logs)
+    logs = [Log(date=datetime.now(), logCode=LOG_CODES.LOST, empId=0, equipId=0, notes=[])] * 9
+    logs += [Log(date=datetime.now(), logCode=LOG_CODES.CHECKIN, empId=0, equipId=1, notes=[])] * 10
+    logs += [Log(date=datetime.now(), logCode=LOG_CODES.CHECKOUT, empId=1, equipId=0, notes=[])] * 11
+    pipeline.addLogs(logs) # add them to the pipeline
 
-# create functions here to test different parts of the system...
+    # could import randint from the random module to really make random number but meh...
+    pipeline.addNumEmployees(5) # random number of employees
+    pipeline.addNumEquipment(20) # random number of equipment
+    pipeline.addNumSkills(7) # random number of skills
 
+def get_output(report):
+    text = f"Header: {report['header']}\n"
+    text += "Data:\n"
+    for key, value in report["data"].items():
+        if key == "logs":
+            value = "..." # don't wanna see all the Log objects in the terminal...
+        text += " "*5 + f"{key} : {value}\n"
+    text += "-"*30
+    return text
+
+
+def test_pipeline(): 
+    report = {'header': 'this is the original report', 'data': {}}
+    pipeline = Pipeline(report=report)
+
+    # add filters
+    pipeline.addFilter([update_header])
+
+    generate_random_stuff_and_add_to_pipeline(pipeline)
+
+    # generate filtered report
+    new_report = pipeline.executeFilters() # need to call this to have the filters work
+    expected = f"""Header: Report {datetime.strftime(datetime.now(), '%m/%d/%Y %I:%M%p')}
+Data:
+     logs : ...
+     numEmployees : 5
+     numEquipment : 20
+     numSkills : 7
+------------------------------"""
+    assert(get_output(new_report) == expected)
+        
+    # the update_header() filter using the text variable
+    func = lambda report: update_header(report, "MY NEW HEADER")
+    expected = f"""Header: Report {datetime.strftime(datetime.now(), '%m/%d/%Y %I:%M%p')}
+Data:
+     logs : ...
+     numEmployees : 5
+     numEquipment : 20
+     numSkills : 7
+------------------------------"""
+    assert(get_output(report) == expected)
+
+    pipeline.addFilter(func) 
+    new_report = pipeline.executeFilters()
+    expected = f"""Header: MY NEW HEADER
+Data:
+     logs : ...
+     numEmployees : 5
+     numEquipment : 20
+     numSkills : 7
+------------------------------"""
+    assert(get_output(report) == expected)
+        
+    pipeline.clear_filters()
+    pipeline.resetReport()
+
+    generate_random_stuff_and_add_to_pipeline(pipeline)
+    expected = f"""Header: MY NEW HEADER
+Data:
+     logs : ...
+     numEmployees : 5
+     numEquipment : 20
+     numSkills : 7
+------------------------------"""
+    assert(get_output(report) == expected)
+
+    pipeline.addFilter([update_header, num_lost_equipment])
+    new_report = pipeline.executeFilters()
+    expected = f"""Header: MY NEW HEADER
+Data:
+     logs : ...
+     numEmployees : 5
+     numEquipment : 20
+     numSkills : 7
+------------------------------"""
+    assert(get_output(report) == expected)
+
+    pipeline.clear_filters()
+    pipeline.resetReport()
+
+    datetime_func_lost = lambda report: calc_datetimes_of(LOG_CODES.LOST, report, 
+                                                        datetime(year=2024, month=2, day=9, hour=0, minute=0), 
+                                                        datetime(year=2024, month=2, day=11, hour=23, minute=59))
+    pipeline.addFilter(datetime_func_lost)
+    new_report = pipeline.executeFilters()
+    expected = """Header: MY NEW HEADER
+Data:
+     logs : ...
+     numEmployees : 5
+     numEquipment : 20
+     numSkills : 7
+------------------------------"""
+    assert(get_output(report) == expected)
+
+
+    pipeline.clear_filters()
+    funcs = [
+        lambda report: calc_frequency_of(LOG_CODES.CHECKIN, report), 
+        lambda report: calc_frequency_of(LOG_CODES.CHECKOUT, report), 
+        lambda report: calc_frequency_of(LOG_CODES.LOST, report),
+        calculate_percentage_lost
+        ]
+    pipeline.addFilter(funcs)
+    new_report = pipeline.executeFilters()
+
+    assert(get_output(report) == expected)
+    print("- Pipeline passed tests")
+
+
+# create functions here to test different parts of the system..
 def do_tests():
     print("Testing...")
     test_getMissingSkills()
     persistent_data_test()
+    test_pipeline()
     # call the functions here
 
 

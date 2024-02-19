@@ -3,8 +3,6 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter.ttk import Button
-from typing import overload
-from dataStructures import Employee, Equipment
 
 # exercise
 # create a scrollbar
@@ -68,7 +66,6 @@ class ListFrame(ttk.Frame):
 			
 			frame.pack(expand = True, fill = 'both', pady =  4, padx = 10)
 
-	
 
 class ButtonVar(Button):
 	def __init__(self, frame, item, i, gui, items, t, *args, **kwargs):

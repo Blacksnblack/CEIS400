@@ -7,8 +7,6 @@ from csv_database import *
 def hash(text):
     return sha256(text.encode('utf-8')).hexdigest()
 
-DEBUG = False  # obviously for debugging...
-
 class Manager:
     def __init__(self, checkoutLimit=1, lostLimit=3, equipment=None, employees=None, termEmployees=None, skills=None, logs=None) -> None:
         self.window = GUI(self)
@@ -53,12 +51,8 @@ class Manager:
         self.skills = read_skills_from_csv("skills.csv")
         self.logs = read_logs_from_csv('logs.csv')
         # Load other data from CSV files if and as needed
-        if DEBUG:
-            print("Load", [[x.name, x.isAdmin] for x in self.employees])
 
     def save_data_to_csv(self):
-        if DEBUG:
-            print("Save", [[x.name, x.isAdmin] for x in self.employees])
         write_employees_to_csv(self.employees, "employees.csv")
         write_equipment_to_csv(self.equipment, "equipment.csv")
         write_skills_to_csv(self.skills, "skills.csv")
@@ -74,23 +68,15 @@ class Manager:
                 return True
         return False
 
-    def login(self, user_id: str, pwd: str) -> bool:
+    def login(self, user_id: str, pwd: str) -> None:
         if len(user_id) == 0 or len(pwd) == 0:
-            return False
-
-        if DEBUG:
-            print(f"Login Attempt:: User: {user_id}, Pass: {pwd}, Success: {self._set_current_user(user_id, pwd)}")
-
-        # TODO: pull credentials from a Database and check? maybe have creds stored locally? (obviously hashed...)
+            self.window.popup(text="Invalid Username or Password")
+            return
+        
         if self._set_current_user(user_id, pwd):
-            # TODO: logged In! so give the GUI the info for the user...
             self.window.main_menu_frame()
             return
         self.window.popup(text="Invalid Username or Password")
-
-
-
-        return False # placeholder return value
 
     def getSkillByID(self, skill_id: str) -> Skill|None:
         for skill in self.skills:
@@ -132,8 +118,8 @@ class Manager:
         equip.borrower_id = None
         emp.borrowedEquipIds.remove(equip.equipId)
 
-        if equip.isLost:
-            equip.isLost = False
+        if equip.isLost:  # TODO: only user that checkouts and loses it can check it in to get it unmarked as lost -> needs fixed
+            equip.isLost = False  
 
         self.window.checkIn()
         self.window.popup(text="Check In Successful", isError=False)

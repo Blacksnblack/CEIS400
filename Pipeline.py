@@ -3,10 +3,6 @@ from datetime import datetime, timedelta
 from dataStructures import *
 from collections.abc import Callable 
 
-# TODO: move Testing done at bottom into tests.py
-
-DEBUG = False
-
 class Pipeline:
 	_report_template = {"header": f"Report {datetime.strftime(datetime.now(), '%m/%d/%Y %I:%M%p')}", "data": {}}
 
@@ -97,7 +93,7 @@ def calculate_percentage_lost(report: dict) -> dict:
 		report['data']['percentageLost'] = f"N/A"
 	return report
    
-def _calc_frequency_of(logCode: int, report: dict):
+def calc_frequency_of(logCode: int, report: dict):
 	logCodeName = getLogCodeName(logCode=logCode)
 	if len(report['data']['logs']) == 0:
 		report['data'][f'frequencyOf{logCodeName}'] = "NA"
@@ -105,7 +101,7 @@ def _calc_frequency_of(logCode: int, report: dict):
 	report['data'][f'frequencyOf{logCodeName}'] = frequency
 	return report
 
-def _calc_datetimes_of(logCode: int, report:dict, start_date: datetime, end_date: datetime=datetime.today()):
+def calc_datetimes_of(logCode: int, report:dict, start_date: datetime, end_date: datetime=datetime.today()):
 	logCodeName = getLogCodeName(logCode=logCode)
 	if len(report['data']['logs']) == 0:
 		report['data'][f'dateTimesOf{logCodeName}'] = "NA"
@@ -118,103 +114,20 @@ AllFilters = [
 	{"name": "Update Header", "func": update_header},
 	{"name": "Calculate Number of Lost Equipment", "func": num_lost_equipment},
 	{"name": "Calculate Percentage Of Lost Equipment", "func": calculate_percentage_lost}] + [
-	{"name": f"Calculate Frequency of Lost Equipment", "func":  lambda report: _calc_frequency_of(logCode=LOG_CODES.LOST, report=report)},
-	{"name": "Calculate Frequency of Checked-In Equipment", "func": lambda report: _calc_frequency_of(logCode=LOG_CODES.CHECKIN, report=report)},
-	{"name": "Calculate Frequency of Checked-Out Equipment", "func": lambda report: _calc_frequency_of(logCode=LOG_CODES.CHECKOUT, report=report)}
+	{"name": f"Calculate Frequency of Lost Equipment", "func":  lambda report: calc_frequency_of(logCode=LOG_CODES.LOST, report=report)},
+	{"name": "Calculate Frequency of Checked-In Equipment", "func": lambda report: calc_frequency_of(logCode=LOG_CODES.CHECKIN, report=report)},
+	{"name": "Calculate Frequency of Checked-Out Equipment", "func": lambda report: calc_frequency_of(logCode=LOG_CODES.CHECKOUT, report=report)}
 	] + [
 	{
 		"name": "Get Dates and times of Lost Equipment in last day", 
-		"func": lambda report: _calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=1))
+		"func": lambda report: calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=1))
 	},
 	{
 		"name": "Get Dates and times of Lost Equipment in last day",
-		"func": lambda report: _calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=7))	
+		"func": lambda report: calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=7))	
 	},
 	{
 		"name": "Get Dates and times of Lost Equipment in last month",
-		"func": lambda report: _calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=30))
+		"func": lambda report: calc_datetimes_of(logCode=LOG_CODES.LOST, report=report, start_date=datetime.today()-timedelta(days=30))
 	}
 	]
-
-
-# --------------------------------------- everything after this point is temporary / for testing ---------------------------------------------------
-def generate_random_stuff_and_add_to_pipeline(pipeline: Pipeline):
-	# generate random logs
-	logs = [Log(date=datetime.now(), logCode=LOG_CODES.LOST, empId=0, equipId=0, notes=[])] * 9
-	logs += [Log(date=datetime.now(), logCode=LOG_CODES.CHECKIN, empId=0, equipId=1, notes=[])] * 10
-	logs += [Log(date=datetime.now(), logCode=LOG_CODES.CHECKOUT, empId=1, equipId=0, notes=[])] * 11
-	pipeline.addLogs(logs) # add them to the pipeline
-
-	# could import randint from the random module to really make random number but meh...
-	pipeline.addNumEmployees(5) # random number of employees
-	pipeline.addNumEquipment(20) # random number of equipment
-	pipeline.addNumSkills(7) # random number of skills
-
-def print_report(report):
-		print(f"Header: {report['header']}")
-		print("Data:")
-		for key, value in report["data"].items():
-			if key == "logs":
-				value = "..." # don't wanna see all the Log objects in the terminal...
-			print(" "*5 + f"{key} : {value}")
-		print("-"*30)
-
-def do_test(): 
-	report = {'header': 'this is the original report', 'data': {}}
-	pipeline = Pipeline(report=report)
-
-	# add filters
-	pipeline.addFilter([update_header])
-	
-	generate_random_stuff_and_add_to_pipeline(pipeline)
-
-	# generate filtered report
-	new_report = pipeline.executeFilters() # need to call this to have the filters work
-	print_report(new_report)
-      
-	# the update_header() filter using the text variable
-	func = lambda report: update_header(report, "MY NEW HEADER")
-	print_report(report)
-
-	pipeline.addFilter(func) 
-	new_report = pipeline.executeFilters()
-	print_report(new_report)
-    
-	pipeline.clear_filters()
-	pipeline.resetReport()
-
-	generate_random_stuff_and_add_to_pipeline(pipeline)
-
-	print_report(pipeline.getReport())
-
-	pipeline.addFilter([update_header, num_lost_equipment])
-	new_report = pipeline.executeFilters()
-	print_report(new_report)
-
-	pipeline.clear_filters()
-	pipeline.resetReport()
-
-	datetime_func_lost = lambda report: _calc_datetimes_of(LOG_CODES.LOST, report, 
-													   datetime(year=2024, month=2, day=9, hour=0, minute=0), 
-													   datetime(year=2024, month=2, day=11, hour=23, minute=59))
-	pipeline.addFilter(datetime_func_lost)
-	new_report = pipeline.executeFilters()
-	print_report(new_report)
-	
-
-	pipeline.clear_filters()
-	funcs = [
-		lambda report: _calc_frequency_of(LOG_CODES.CHECKIN, report), 
-		lambda report: _calc_frequency_of(LOG_CODES.CHECKOUT, report), 
-		lambda report: _calc_frequency_of(LOG_CODES.LOST, report),
-		calculate_percentage_lost
-		]
-	print(funcs)
-	pipeline.addFilter(funcs)
-	new_report = pipeline.executeFilters()
-
-	print_report(new_report)
-
-    
-if __name__=="__main__": # standard to show that this file is runnable but this is just temporary for testing
-	do_test()

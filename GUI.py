@@ -6,10 +6,7 @@ from hashlib import sha256
 from dataStructures import Employee, Equipment, Skill, Log
 from customWidgets import ListFrame
 from Pipeline import AllFilters, Pipeline
-from collections.abc import Callable 
 
-
-DEBUG = False  # for debugging...
 
 class Manager(Protocol):  # for accessing Manager class without circular importing error
     loggedIn: bool
@@ -162,9 +159,6 @@ class GUI(tk.Tk):
             {"text": "View User Details",   "command": lambda : self.UserDetails()},
             {"text": "Report Lost Equipment", "command": lambda: self.lostEquipment_selection()}
         ]
-
-        if DEBUG:
-            print(self.current_frame.grid_size())
 
         rows = len(btn_dicts) + 4
         if self.manager.current_user.isAdmin:
@@ -378,8 +372,6 @@ class GUI(tk.Tk):
         if selection_index is None:
             self._getSelection(items=items, t=t)
             return
-        if DEBUG:
-            print(f"Selection Index: {selection_index}")
         
         self.clear_current_frame()
         cols, rows = 6, 10
